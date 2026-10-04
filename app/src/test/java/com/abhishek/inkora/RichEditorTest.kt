@@ -106,4 +106,16 @@ class RichEditorTest {
         val r = d.render(Color.Black).text
         assertTrue(!r.contains("**") && !r.contains("[ ]") && !r.contains("_it_"))
     }
+
+    @Test fun activeBlocks_uniformSelection() {
+        val d = docOf("A\nB", TextRange(0, 3)).toggleBlock(BlockKind.BULLET)
+        assertTrue(d.copy(selection = TextRange(0, 3)).activeBlocks().contains(BlockKind.BULLET))
+    }
+
+    @Test fun activeBlocks_mixedOrParagraph_yieldsEmpty() {
+        val d = docOf("A\nB", TextRange(0, 3))
+        assertTrue(d.activeBlocks().isEmpty())
+        val one = docOf("A\nB", TextRange(0, 1)).toggleBlock(BlockKind.BULLET)
+        assertTrue(one.copy(selection = TextRange(0, 5)).activeBlocks().isEmpty())
+    }
 }
