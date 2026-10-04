@@ -11,14 +11,17 @@ import com.abhishek.inkora.domain.model.PageStyle
 import com.abhishek.inkora.domain.model.PaperBackground
 import com.abhishek.inkora.domain.model.RichText
 import com.abhishek.inkora.domain.model.SpanKind
+import com.abhishek.inkora.domain.repository.FolderRepository
 import com.abhishek.inkora.domain.repository.NoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class EditorUiState(
@@ -38,11 +41,14 @@ private const val UNDO_CAP = 60
 class EditorViewModel @Inject constructor(
     private val notes: NoteRepository,
     private val settings: SettingsRepository,
+    private val folders: FolderRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val noteId: Long = savedStateHandle.get<Long>("noteId") ?: 0L
     private val _state = MutableStateFlow(EditorUiState())
     val state: StateFlow<EditorUiState> = _state
+    val allFolders = folders.observeFolders()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     private var saveJob: Job? = null
     private val undoStack = ArrayDeque<RichDoc>()
     private val redoStack = ArrayDeque<RichDoc>()
@@ -158,6 +164,15 @@ class EditorViewModel @Inject constructor(
     fun setPageStyle(s: PageStyle) = persistStyle { it.copy(pageStyle = s.key) }
     fun setPaperBackground(b: PaperBackground, customHex: String? = null) =
         persistStyle { it.copy(backgroundStyle = b.key.lowercase(), backgroundColor = customHex ?: it.backgroundColor) }
+
+    /** Assign to a folder (null = no folder). Never duplicates; persists via Room. */
+    fun moveToFolder(folderId: Long?) {
+        val n = _state.value.note ?: return
+        viewModelScope.launch {
+            notes.moveToFolder(n.id, folderId)
+            _state.value = _state.value.copy(note = n.copy(folderId = folderId))
+        }
+    }
 
     fun trash(onDone: () -> Unit) {
         val s = _state.value
