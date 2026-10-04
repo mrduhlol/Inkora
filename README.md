@@ -11,7 +11,7 @@
 > No account. No cloud. No tracking. Everything stays on your device.
 
 <p align="center">
-  <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.0-debug.apk">
+  <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk">
     <img src="https://img.shields.io/badge/⬇_Download_Inkora_v1.0_APK-6750A4?style=for-the-badge&logo=android&logoColor=white" alt="Download Inkora v1.0 APK" />
   </a>
 </p>
