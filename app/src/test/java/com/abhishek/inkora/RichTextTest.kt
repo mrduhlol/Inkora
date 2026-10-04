@@ -131,4 +131,18 @@ class RichTextTest {
         assertTrue(c.text.contains("hi"))
         assertTrue(!c.text.contains("**"))
     }
+
+    @Test fun displayTitle_prefersStoredTitle() {
+        assertEquals("Mine", RichText.displayTitle("Mine", "Other body", "md-v1"))
+    }
+
+    @Test fun displayTitle_derivesFromFirstContentLine() {
+        assertEquals("Shopping", RichText.displayTitle("", "\nShopping\n- eggs", "md-v1"))
+    }
+
+    @Test fun displayTitle_stripsMarkersAndCapsLength() {
+        val t = RichText.displayTitle("", "**Bold** intro", "md-v1")
+        assertEquals("Bold intro", t)
+        assertEquals("", RichText.displayTitle("", "   \n  ", "md-v1"))
+    }
 }
