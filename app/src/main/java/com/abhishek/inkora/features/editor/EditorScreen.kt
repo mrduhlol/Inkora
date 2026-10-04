@@ -127,12 +127,14 @@ fun EditorScreen(
                         placeholder = { Text("Title", color = muted) },
                         singleLine = true,
                         textStyle = TextStyle(color = ink, fontSize = 20.sp),
-                        cursorBrush = SolidColor(ink),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent,
                             focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
+                            unfocusedIndicatorColor = Color.Transparent,
+                            cursorColor = ink,
+                            focusedPlaceholderColor = muted,
+                            unfocusedPlaceholderColor = muted
                         )
                     )
                     Box(Modifier.fillMaxSize()) {
