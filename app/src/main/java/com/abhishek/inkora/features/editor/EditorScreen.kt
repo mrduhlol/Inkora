@@ -135,10 +135,6 @@ fun EditorScreen(
                         onSelect = { vm.setPageStyle(it) }
                     )
                     Text("Paper", fontSize = 18.sp, modifier = Modifier.padding(top = 16.dp))
-                    PageStyleSelector( // reuse chips row for paper choices via style mapping
-                        selected = PageStyle.fromKey(note?.pageStyle),
-                        onSelect = {}
-                    )
                     // Paper background shortcuts
                     androidx.compose.foundation.layout.Row {
                         listOf(PaperBackground.WHITE, PaperBackground.CREAM, PaperBackground.GRAY, PaperBackground.DARK)
