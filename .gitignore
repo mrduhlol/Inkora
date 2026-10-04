@@ -1,0 +1,24 @@
+# Inkora — Android (native, offline-first)
+# Gradle / Android
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+build/
+app/build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+# Keystore
+*.jks
+*.keystore
+# Wrapper jar (we keep properties + scripts, jar is fetched)
+/gradle/wrapper/gradle-wrapper.jar
+# Kotlin
+*.class
+# OS
+Thumbs.db
