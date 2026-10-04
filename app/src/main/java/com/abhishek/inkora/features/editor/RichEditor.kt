@@ -5,10 +5,15 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.sp
 import com.abhishek.inkora.domain.model.BlockKind
+import com.abhishek.inkora.domain.model.ParaAlign
+import com.abhishek.inkora.domain.model.RichAlign
 import com.abhishek.inkora.domain.model.RichBlock
 import com.abhishek.inkora.domain.model.RichContent
 import com.abhishek.inkora.domain.model.RichSpan
@@ -27,8 +32,17 @@ data class EditLine(
     val text: String = "",
     val spans: List<RichSpan> = emptyList(), // relative to [text]
     val block: BlockKind = BlockKind.PARAGRAPH,
-    val checked: Boolean = false
+    val checked: Boolean = false,
+    val indent: Int = 0, // 0..4, rendered as em-space prefix
+    val align: ParaAlign = ParaAlign.LEFT
 )
+
+fun ParaAlign.toTextAlign(): TextAlign = when (this) {
+    ParaAlign.LEFT -> TextAlign.Left
+    ParaAlign.CENTER -> TextAlign.Center
+    ParaAlign.RIGHT -> TextAlign.Right
+    ParaAlign.JUSTIFY -> TextAlign.Justify
+}
 
 data class RichDoc(
     val lines: List<EditLine> = listOf(EditLine()),
@@ -36,6 +50,9 @@ data class RichDoc(
     val pending: Set<SpanKind> = emptySet()
 ) {
     companion object {
+        /** Invisible indent prefix: em-spaces, never user syntax. */
+        fun indentStr(indent: Int): String = "\u2003\u2003".repeat(indent.coerceIn(0, 4))
+
         fun fromRich(c: RichContent, selection: TextRange = TextRange.Zero): RichDoc {
             val raw = RichText.linesOf(c.text)
             return RichDoc(
@@ -47,7 +64,11 @@ data class RichDoc(
                         if (s < e) RichSpan(s, e, it.kind) else null
                     }
                     val b = c.blocks.firstOrNull { it.line == i }
-                    EditLine(t, rel, b?.kind ?: BlockKind.PARAGRAPH, b?.checked ?: false)
+                    val a = c.aligns.firstOrNull { it.line == i }
+                    EditLine(
+                        t, rel, b?.kind ?: BlockKind.PARAGRAPH, b?.checked ?: false,
+                        b?.indent?.coerceIn(0, 4) ?: 0, a?.align ?: ParaAlign.LEFT
+                    )
                 }.ifEmpty { listOf(EditLine()) },
                 selection = selection
             )
@@ -70,14 +91,18 @@ data class RichDoc(
         val sb = StringBuilder()
         val spans = mutableListOf<RichSpan>()
         val blocks = mutableListOf<RichBlock>()
+        val aligns = mutableListOf<RichAlign>()
         lines.forEachIndexed { i, l ->
             if (i > 0) sb.append('\n')
             val base = sb.length
             sb.append(l.text)
             l.spans.forEach { spans.add(RichSpan(base + it.start, base + it.end, it.kind)) }
-            if (l.block != BlockKind.PARAGRAPH) blocks.add(RichBlock(i, l.block, l.checked))
+            if (l.block != BlockKind.PARAGRAPH || l.indent != 0) {
+                blocks.add(RichBlock(i, l.block, l.checked, l.indent.coerceIn(0, 4)))
+            }
+            if (l.align != ParaAlign.LEFT) aligns.add(RichAlign(i, l.align))
         }
-        return RichContent(sb.toString(), spans, blocks)
+        return RichContent(sb.toString(), spans, blocks, aligns)
     }
 
     /** Rendered text (with generated prefixes) — the string BasicTextField edits. */
@@ -91,32 +116,66 @@ data class RichDoc(
         }
     }
 
-    fun prefixFor(l: EditLine, number: Int): String = when (l.block) {
-        BlockKind.BULLET -> "• "
-        BlockKind.NUMBERED -> "$number. "
-        BlockKind.CHECK -> (if (l.checked) "☑ " else "☐ ")
-        BlockKind.PARAGRAPH -> ""
+    fun prefixFor(l: EditLine, number: Int): String {
+        // Em-space indent: invisible formatting, distinct from user-typed spaces.
+        val indent = indentStr(l.indent)
+        val kind = when (l.block) {
+            BlockKind.BULLET -> "• "
+            BlockKind.NUMBERED -> "$number. "
+            BlockKind.CHECK -> (if (l.checked) "☑ " else "☐ ")
+            BlockKind.QUOTE -> "┃ "
+            BlockKind.DIVIDER -> ""
+            else -> ""
+        }
+        return indent + kind
     }
 
-    fun render(prefixColor: Color): AnnotatedString {
+    fun render(prefixColor: Color, accent: Color = prefixColor): AnnotatedString {
         var number = 0
         return buildAnnotatedString {
             lines.forEachIndexed { i, l ->
                 if (i > 0) append("\n")
                 if (l.block == BlockKind.NUMBERED) number += 1
-                val p = prefixFor(l, number)
-                if (p.isNotEmpty()) {
+                val lineStart = length
+                if (l.block == BlockKind.DIVIDER) {
                     pushStyle(SpanStyle(color = prefixColor))
-                    append(p)
+                    append("──────────")
                     pop()
+                } else {
+                    val p = prefixFor(l, number)
+                    if (p.isNotEmpty()) {
+                        // Quote bar uses the accent; other glyphs stay muted.
+                        val endsWithBar = p.endsWith("┃ ")
+                        if (endsWithBar) {
+                            val ind = p.substring(0, p.length - 2)
+                            if (ind.isNotEmpty()) {
+                                pushStyle(SpanStyle(color = prefixColor)); append(ind); pop()
+                            }
+                            pushStyle(SpanStyle(color = accent)); append("┃ "); pop()
+                        } else {
+                            pushStyle(SpanStyle(color = prefixColor)); append(p); pop()
+                        }
+                    }
+                    val base = length
+                    append(l.text)
+                    lineStyleFor(l)?.let { addStyle(it, base, base + l.text.length) }
+                    l.spans.forEach { s ->
+                        addStyle(styleFor(s.kind), base + s.start, base + s.end)
+                    }
                 }
-                val base = length
-                append(l.text)
-                l.spans.forEach { s ->
-                    addStyle(styleFor(s.kind), base + s.start, base + s.end)
+                if (l.align != ParaAlign.LEFT) {
+                    addStyle(ParagraphStyle(textAlign = l.align.toTextAlign()), lineStart, length)
                 }
             }
         }
+    }
+
+    private fun lineStyleFor(l: EditLine): SpanStyle? = when (l.block) {
+        BlockKind.HEADING1 -> SpanStyle(fontWeight = FontWeight.Bold, fontSize = 22.sp)
+        BlockKind.HEADING2 -> SpanStyle(fontWeight = FontWeight.Bold, fontSize = 19.sp)
+        BlockKind.HEADING3 -> SpanStyle(fontWeight = FontWeight.Bold, fontSize = 17.sp)
+        BlockKind.QUOTE -> SpanStyle(fontStyle = FontStyle.Italic)
+        else -> null
     }
 
     /** Absolute prefix ranges in rendered text (for checkbox tap detection). */
@@ -192,36 +251,51 @@ data class RichDoc(
         return if (e > s) s to e else null
     }
 
-    /** Enter continuation: null = not a simple Enter (use generic path). */
+    /**
+     * Enter-key split at [newIdx] (new line) from [srcIdx] (source line).
+     * Only BULLET/NUMBERED/CHECK continue; headings, quotes, dividers and
+     * paragraphs break to plain paragraphs. Old lines map explicitly so later
+     * list lines never lose their blocks (no index drift).
+     * Null = not a simple Enter (use generic path).
+     */
     private fun handleEnter(newRendered: String, cursor: TextRange, newSel: TextRange): RichDoc? {
         val newLines = newRendered.split('\n')
         if (newLines.size != lines.size + 1) return null
         val newIdx = lineIndexAtRenderedText(newRendered, cursor.start)
         val srcIdx = newIdx - 1
-        if (srcIdx < 0 || srcIdx >= lines.size) return null
+        if (srcIdx !in lines.indices || newIdx !in newLines.indices) return null
         val src = lines[srcIdx]
-        if (src.block == BlockKind.PARAGRAPH) return null
-        val srcText = newLines[srcIdx]
-        val strippedSrc = stripExpected(srcText, src)
-        return if (strippedSrc.isBlank()) {
-            // Empty item -> exit list: source line becomes paragraph, caret to its start.
-            // Re-parse remaining lines generically, then fix the affected line.
-            val base = onInputGeneric(newRendered, newSel)
-            val fixed = base.lines.toMutableList()
-            if (srcIdx < fixed.size) fixed[srcIdx] = fixed[srcIdx].copy(block = BlockKind.PARAGRAPH, checked = false)
-            val withFixed = base.copy(lines = fixed)
-            withFixed.copy(selection = TextRange(withFixed.renderedLineStart(withFixed.rendered(), srcIdx)))
-        } else {
-            val base = onInputGeneric(newRendered, newSel)
-            val fixed = base.lines.toMutableList()
-            if (newIdx < fixed.size) {
-                fixed[newIdx] = fixed[newIdx].copy(block = src.block, checked = false, spans = emptyList())
+        val oldFor: (Int) -> EditLine? = { i ->
+            when {
+                i < newIdx -> lines.getOrNull(i)
+                i == newIdx -> null
+                else -> lines.getOrNull(i - 1)
             }
-            // Caret goes after the generated prefix so typing lands in content.
-            val withFixed = base.copy(lines = fixed)
-            val r = withFixed.rendered()
-            val ls = withFixed.renderedLineStart(r, newIdx)
-            withFixed.copy(selection = TextRange(ls + withFixed.prefixLenAt(newIdx)))
+        }
+        val parsed = newLines.mapIndexed { i, raw -> parseLine(raw, oldFor(i)) }.toMutableList()
+        val srcText = stripExpected(newLines[srcIdx], src)
+        return when (src.block) {
+            BlockKind.BULLET, BlockKind.NUMBERED, BlockKind.CHECK -> {
+                if (srcText.isBlank()) {
+                    // Empty item -> exit list.
+                    parsed[srcIdx] = parsed[srcIdx].copy(block = BlockKind.PARAGRAPH, checked = false)
+                    val withFixed = copy(lines = parsed.ifEmpty { listOf(EditLine()) })
+                    withFixed.copy(
+                        selection = TextRange(withFixed.renderedLineStart(withFixed.rendered(), srcIdx))
+                    )
+                } else {
+                    parsed[newIdx] = parsed[newIdx].copy(block = src.block, checked = false, spans = emptyList())
+                    val withFixed = copy(lines = parsed)
+                    val r = withFixed.rendered()
+                    val ls = withFixed.renderedLineStart(r, newIdx)
+                    withFixed.copy(selection = TextRange(ls + withFixed.prefixLenAt(newIdx)))
+                }
+            }
+            else -> {
+                // Headings, quotes, dividers, paragraphs: new line stays a paragraph.
+                val withFixed = copy(lines = parsed.ifEmpty { listOf(EditLine()) })
+                withFixed.copy(selection = newSel)
+            }
         }
     }
 
@@ -253,25 +327,39 @@ data class RichDoc(
     }
 
     private fun stripExpected(raw: String, line: EditLine): String {
+        val ind = indentStr(line.indent)
+        val body = if (ind.isNotEmpty() && raw.startsWith(ind)) raw.substring(ind.length) else raw
         // Numbered prefix varies; match generically.
-        val noNum = Regex("""^\d+\.\s+""").replaceFirst(raw, "")
+        val noNum = Regex("""^\d+\.\s+""").replaceFirst(body, "")
         if (line.block == BlockKind.NUMBERED) return noNum
         val p = when (line.block) {
             BlockKind.BULLET -> "• "
-            BlockKind.CHECK -> if (raw.startsWith("☑ ")) "☑ " else "☐ "
+            BlockKind.CHECK -> if (body.startsWith("☑ ")) "☑ " else "☐ "
+            BlockKind.QUOTE -> "┃ "
+            BlockKind.DIVIDER -> return ""
             else -> ""
         }
-        return if (p.isNotEmpty() && raw.startsWith(p)) raw.substring(p.length) else raw
+        return if (p.isNotEmpty() && body.startsWith(p)) body.substring(p.length) else body
     }
 
     /**
-     * Parse one edited rendered line back into content + block.
-     * Generated prefixes are stripped wherever they moved; the block is kept by
-     * line slot, so user edits never silently change list structure.
+     * Parse one edited rendered line back into content + structure.
+     * Generated prefixes are stripped wherever they moved; block/align/indent
+     * are kept by line slot, so user edits never silently change structure.
+     * Divider lines are atomic: any typed text converts them to paragraphs.
      */
     private fun parseLine(raw: String, old: EditLine?): EditLine {
-        if (old == null || old.block == BlockKind.PARAGRAPH) return EditLine(raw, emptyList())
+        if (old == null) return EditLine(raw, emptyList())
+        if (old.block == BlockKind.DIVIDER) {
+            return if (raw.isBlank()) old.copy(text = "")
+            else EditLine(raw.trim(), emptyList())
+        }
+        if (old.block == BlockKind.PARAGRAPH && old.indent == 0) {
+            return EditLine(raw, remapSpans(old, raw), align = old.align)
+        }
         var text = raw
+        val ind = indentStr(old.indent)
+        if (ind.isNotEmpty() && text.startsWith(ind)) text = text.substring(ind.length)
         val candidates = mutableListOf<String>()
         when (old.block) {
             BlockKind.BULLET -> candidates.add("• ")
@@ -280,6 +368,7 @@ data class RichDoc(
                 candidates.add(if (old.checked) "☑ " else "☐ ")
                 candidates.add(if (old.checked) "☐ " else "☑ ")
             }
+            BlockKind.QUOTE -> candidates.add("┃ ")
             else -> Unit
         }
         val hit = candidates.firstOrNull { it.isNotEmpty() && text.startsWith(it) }
@@ -287,12 +376,12 @@ data class RichDoc(
             text = text.substring(hit.length)
         } else {
             // Prefix moved mid-line (typed before it) or partially deleted: remove it,
-            // else keep text as-is. Block is preserved either way.
+            // else keep text as-is. Structure is preserved either way.
             candidates.firstOrNull { it.isNotEmpty() && text.contains(it) }?.let {
                 text = text.replaceFirst(it, "")
             }
         }
-        return EditLine(text, remapSpans(old, text), old.block, old.checked)
+        return EditLine(text, remapSpans(old, text), old.block, old.checked, old.indent, old.align)
     }
 
     private fun onInputGeneric(newRendered: String, newSel: TextRange): RichDoc {
@@ -370,6 +459,77 @@ data class RichDoc(
         if (cur.block != BlockKind.CHECK) return this
         return copy(lines = lines.mapIndexed { i, l -> if (i == line) l.copy(checked = !l.checked) else l })
     }
+
+    private fun selectedLines(): IntRange {
+        val r = rendered()
+        return RichText.linesInSelection(r, selection.min, selection.max)
+    }
+
+    private fun restyleSelected(map: (EditLine) -> EditLine): RichDoc {
+        val r = rendered()
+        val range = selectedLines()
+        val updated = lines.mapIndexed { i, l -> if (i in range) map(l) else l }
+        return copy(lines = updated, selection = shiftSelection(r, updated))
+    }
+
+    /** Heading cycle over selected lines: Body → H1 → H2 → H3 → Body. */
+    fun cycleHeading(): RichDoc {
+        val first = lines.getOrNull(selectedLines().first)?.block
+        val next = when (first) {
+            BlockKind.HEADING1 -> BlockKind.HEADING2
+            BlockKind.HEADING2 -> BlockKind.HEADING3
+            BlockKind.HEADING3 -> BlockKind.PARAGRAPH
+            else -> BlockKind.HEADING1
+        }
+        return restyleSelected { it.copy(block = next, checked = false) }
+    }
+
+    /** Quote toggle over selected lines. */
+    fun toggleQuote(): RichDoc {
+        val range = selectedLines()
+        val allSet = range.all { lines.getOrNull(it)?.block == BlockKind.QUOTE }
+        return restyleSelected {
+            it.copy(block = if (allSet) BlockKind.PARAGRAPH else BlockKind.QUOTE, checked = false)
+        }
+    }
+
+    /**
+     * Insert a divider below the current line. Blank current line becomes the
+     * divider itself; otherwise a new divider line is inserted after it.
+     */
+    fun insertDivider(): RichDoc {
+        val li = lineIndexAtRendered(selection.min)
+        val cur = lines.getOrNull(li) ?: return this
+        val updated = lines.toMutableList()
+        if (cur.text.isBlank() && cur.block == BlockKind.PARAGRAPH) {
+            updated[li] = cur.copy(block = BlockKind.DIVIDER, spans = emptyList())
+        } else {
+            updated.add(li + 1, EditLine(block = BlockKind.DIVIDER))
+        }
+        val withLines = copy(lines = updated)
+        // Caret to the line after the divider.
+        val target = (li + 1).coerceAtMost(withLines.lines.size - 1)
+        val nr = withLines.rendered()
+        return withLines.copy(selection = TextRange(withLines.renderedLineStart(nr, target)))
+    }
+
+    /** Alignment cycle over selected paragraphs: Left → Center → Right → Justify. */
+    fun cycleAlign(): RichDoc {
+        val first = lines.getOrNull(selectedLines().first)?.align ?: ParaAlign.LEFT
+        val next = when (first) {
+            ParaAlign.LEFT -> ParaAlign.CENTER
+            ParaAlign.CENTER -> ParaAlign.RIGHT
+            ParaAlign.RIGHT -> ParaAlign.JUSTIFY
+            ParaAlign.JUSTIFY -> ParaAlign.LEFT
+        }
+        return restyleSelected { it.copy(align = next) }
+    }
+
+    fun indentMore(): RichDoc =
+        restyleSelected { it.copy(indent = (it.indent + 1).coerceAtMost(4)) }
+
+    fun indentLess(): RichDoc =
+        restyleSelected { it.copy(indent = (it.indent - 1).coerceAtLeast(0)) }
 
     private fun shiftSelection(oldRendered: String, newLines: List<EditLine>): TextRange {
         // Recompute selection by mapping old absolute offsets through line/prefix deltas.
