@@ -253,8 +253,24 @@ class EditorViewModel @Inject constructor(
 
     fun addImage(uri: Uri) {
         viewModelScope.launch {
-            attachmentsRepo.add(noteId, uri)
-            scheduleSave() // bump updatedAt so the note resurfaces
+            val id = attachmentsRepo.add(noteId, uri)
+            if (id == null) {
+                _state.value = _state.value.copy(saveError = "Couldn't add that image — try another file")
+            } else {
+                scheduleSave() // bump updatedAt so the note resurfaces
+            }
+        }
+    }
+
+    fun addDrawing(png: ByteArray) {
+        viewModelScope.launch {
+            runCatching {
+                attachmentsRepo.storeBytes(noteId, "drawing-${System.currentTimeMillis()}.png", "image/png", png)
+            }.onFailure {
+                _state.value = _state.value.copy(saveError = "Couldn't save drawing")
+            }.onSuccess {
+                scheduleSave()
+            }
         }
     }
 
