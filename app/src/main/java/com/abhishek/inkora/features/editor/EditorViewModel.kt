@@ -1,9 +1,11 @@
 package com.abhishek.inkora.features.editor
 
 import androidx.compose.ui.text.TextRange
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.abhishek.inkora.data.repository.AttachmentRepository
 import com.abhishek.inkora.data.repository.SettingsRepository
 import com.abhishek.inkora.domain.model.BlockKind
 import com.abhishek.inkora.domain.model.Note
@@ -32,7 +34,14 @@ data class EditorUiState(
     val canUndo: Boolean = false,
     val canRedo: Boolean = false,
     val textSizeSp: Int = 16,
-    val savedTick: Long = 0L
+    val savedTick: Long = 0L,
+    val saveError: String? = null
+)
+
+data class NoteStats(
+    val words: Int,
+    val chars: Int,
+    val lines: Int
 )
 
 private const val UNDO_CAP = 60
@@ -42,12 +51,15 @@ class EditorViewModel @Inject constructor(
     private val notes: NoteRepository,
     private val settings: SettingsRepository,
     private val folders: FolderRepository,
+    private val attachmentsRepo: AttachmentRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val noteId: Long = savedStateHandle.get<Long>("noteId") ?: 0L
     private val _state = MutableStateFlow(EditorUiState())
     val state: StateFlow<EditorUiState> = _state
     val allFolders = folders.observeFolders()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val attachments = attachmentsRepo.observe(noteId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     private var saveJob: Job? = null
     private val undoStack = ArrayDeque<RichDoc>()
@@ -133,6 +145,20 @@ class EditorViewModel @Inject constructor(
         scheduleSave()
     }
 
+    fun cycleHeading() = structureOp { it.cycleHeading() }
+    fun toggleQuote() = structureOp { it.toggleQuote() }
+    fun insertDivider() = structureOp { it.insertDivider() }
+    fun cycleAlign() = structureOp { it.cycleAlign() }
+    fun indentMore() = structureOp { it.indentMore() }
+    fun indentLess() = structureOp { it.indentLess() }
+
+    private fun structureOp(op: (RichDoc) -> RichDoc) {
+        pushUndo()
+        _state.value = _state.value.copy(doc = op(_state.value.doc))
+        refreshUndo()
+        scheduleSave()
+    }
+
     fun undo() {
         val prev = undoStack.removeLastOrNull() ?: return
         redoStack.addLast(_state.value.doc)
@@ -209,8 +235,45 @@ class EditorViewModel @Inject constructor(
             content = RichText.encode(s.doc.toRich()),
             contentFormat = RichText.FORMAT
         )
-        notes.upsert(updated)
-        _state.value = s.copy(note = updated, savedTick = System.currentTimeMillis())
+        // Data safety: a failed write keeps in-memory content and surfaces an
+        // error instead of silently discarding; the next edit retries.
+        val ok = runCatching { notes.upsert(updated) }.isSuccess
+        _state.value = if (ok) {
+            s.copy(note = updated, savedTick = System.currentTimeMillis(), saveError = null)
+        } else {
+            s.copy(saveError = "Could not save — will retry on your next edit")
+        }
+    }
+
+    fun dismissSaveError() {
+        _state.value = _state.value.copy(saveError = null)
+    }
+
+    // ---------- attachments (app-private files, Room metadata) ----------
+
+    fun addImage(uri: Uri) {
+        viewModelScope.launch {
+            attachmentsRepo.add(noteId, uri)
+            scheduleSave() // bump updatedAt so the note resurfaces
+        }
+    }
+
+    fun removeImage(id: Long) {
+        viewModelScope.launch { attachmentsRepo.remove(id) }
+    }
+
+    /** Lightweight stats, computed on demand for Note Info (never per keystroke). */
+    fun stats(): NoteStats {
+        val text = _state.value.doc.toRich().text
+        val words = text.split(Regex("\\s+")).count { it.isNotBlank() }
+        return NoteStats(words, text.length, text.lines().size)
+    }
+
+    /** Readable plain-text share payload: title + clean body. */
+    fun shareText(): String {
+        val s = _state.value
+        val body = RichText.plain(s.doc.toRich())
+        return if (s.title.isBlank()) body else "${s.title}\n\n$body"
     }
 
     /** Flush pending autosave, e.g. on back navigation. */
