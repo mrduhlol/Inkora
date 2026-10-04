@@ -2,7 +2,6 @@ package com.abhishek.inkora.features.editor
 
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -116,7 +115,7 @@ fun EditorScreen(
     val titleFocus = remember { FocusRequester() }
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) vm.addImage(uri)
     }
 
@@ -175,7 +174,7 @@ fun EditorScreen(
                         leadingIcon = { Icon(Icons.Filled.AddPhotoAlternate, null) },
                         onClick = {
                             menu = false
-                            picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            picker.launch("image/*")
                         }
                     )
                     DropdownMenuItem(
@@ -273,7 +272,7 @@ fun EditorScreen(
                     attachments = attachments,
                     onOpen = { viewer = it },
                     onRemove = { vm.removeImage(it) },
-                    onAdd = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+                    onAdd = { picker.launch("image/*") }
                 )
             }
             FormattingToolbar(
