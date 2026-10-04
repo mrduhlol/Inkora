@@ -5,10 +5,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -82,6 +86,8 @@ fun HomeScreen(
             ) {}
             if (state.notes.isEmpty() && !state.isSearching) {
                 EmptyNotesState()
+            } else if (state.notes.isEmpty()) {
+                NoResultsState(query = state.query)
             } else {
                 NoteGrid(
                     notes = state.notes,
@@ -95,5 +101,25 @@ fun HomeScreen(
                 )
             }
         }
+    }
+}
+
+/** Intentional empty state for searches with no matches. */
+@Composable
+private fun NoResultsState(query: String) {
+    Column(
+        Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(Modifier.height(48.dp))
+        Icon(Icons.Filled.SearchOff, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.outline)
+        Spacer(Modifier.height(16.dp))
+        Text("No matching notes", style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Nothing matches “$query”.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
