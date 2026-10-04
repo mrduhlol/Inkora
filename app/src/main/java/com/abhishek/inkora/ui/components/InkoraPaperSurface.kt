@@ -10,12 +10,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import com.abhishek.inkora.domain.model.PageStyle
 import com.abhishek.inkora.ui.theme.DotColor
 import com.abhishek.inkora.ui.theme.GridLine
 import com.abhishek.inkora.ui.theme.RuleLine
 import com.abhishek.inkora.ui.theme.paperColorFor
+
+/**
+ * Ruling colors adapted to the paper: subtle dark-on-light, light-on-dark,
+ * always behind text at low visual weight.
+ */
+fun rulingColorsFor(paper: Color): Triple<Color, Color, Color> =
+    if (paper.luminance() > 0.5f) Triple(RuleLine, GridLine, DotColor)
+    else Triple(
+        Color(0xFF3A372F).copy(alpha = 0.9f),
+        Color(0xFF3A372F).copy(alpha = 0.7f),
+        Color(0xFF5A554A)
+    )
 
 /**
  * Paper surface that paints blank / ruled / grid / dotted backgrounds.
@@ -39,12 +52,13 @@ fun InkoraPaperSurface(
     ) {
         Box(Modifier.fillMaxSize()) {
             Canvas(Modifier.fillMaxSize()) {
+                val (rule, grid, dots) = rulingColorsFor(paper)
                 when (PageStyle.fromKey(pageStyle)) {
                     PageStyle.RULED -> {
                         val step = 28.dp.toPx()
                         var y = step
                         while (y < size.height) {
-                            drawLine(RuleLine, Offset(0f, y), Offset(size.width, y), 1.2f)
+                            drawLine(rule, Offset(0f, y), Offset(size.width, y), 1.2f)
                             y += step
                         }
                     }
@@ -52,12 +66,12 @@ fun InkoraPaperSurface(
                         val step = 24.dp.toPx()
                         var x = 0f
                         while (x < size.width) {
-                            drawLine(GridLine, Offset(x, 0f), Offset(x, size.height), 1f)
+                            drawLine(grid, Offset(x, 0f), Offset(x, size.height), 1f)
                             x += step
                         }
                         var y = 0f
                         while (y < size.height) {
-                            drawLine(GridLine, Offset(0f, y), Offset(size.width, y), 1f)
+                            drawLine(grid, Offset(0f, y), Offset(size.width, y), 1f)
                             y += step
                         }
                     }
@@ -67,7 +81,7 @@ fun InkoraPaperSurface(
                         while (y < size.height) {
                             var x = stepX
                             while (x < size.width) {
-                                drawCircle(DotColor, 2.2f, Offset(x, y))
+                                drawCircle(dots, 2.2f, Offset(x, y))
                                 x += stepX
                             }
                             y += stepY
