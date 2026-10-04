@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.abhishek.inkora.domain.model.AccentColor
 import com.abhishek.inkora.domain.model.AppTheme
+import com.abhishek.inkora.domain.model.HomeViewMode
 import com.abhishek.inkora.domain.model.PageStyle
 import com.abhishek.inkora.domain.model.PaperBackground
 import com.abhishek.inkora.domain.model.SortOrder
@@ -23,7 +24,8 @@ data class InkoraSettings(
     val defaultTextSizeSp: Int = 16,
     val autoSave: Boolean = true,
     val sortOrder: SortOrder = SortOrder.UPDATED_DESC,
-    val gridColumns: Int = 0 // 0 = adaptive
+    val gridColumns: Int = 0, // 0 = adaptive
+    val viewMode: HomeViewMode = HomeViewMode.GRID
 )
 
 class SettingsRepository @Inject constructor(
@@ -39,6 +41,7 @@ class SettingsRepository @Inject constructor(
         val AUTOSAVE = stringPreferencesKey("autosave")
         val SORT = stringPreferencesKey("sort")
         val GRID = intPreferencesKey("grid")
+        val VIEW = stringPreferencesKey("view_mode")
     }
 
     val settings: Flow<InkoraSettings> = store.data.map { p ->
@@ -51,7 +54,8 @@ class SettingsRepository @Inject constructor(
             defaultTextSizeSp = p[K.TEXT_SIZE] ?: 16,
             autoSave = (p[K.AUTOSAVE] ?: "1") == "1",
             sortOrder = runCatching { SortOrder.valueOf(p[K.SORT] ?: "UPDATED_DESC") }.getOrDefault(SortOrder.UPDATED_DESC),
-            gridColumns = p[K.GRID] ?: 0
+            gridColumns = p[K.GRID] ?: 0,
+            viewMode = runCatching { HomeViewMode.valueOf(p[K.VIEW] ?: "GRID") }.getOrDefault(HomeViewMode.GRID)
         )
     }
 
@@ -64,4 +68,5 @@ class SettingsRepository @Inject constructor(
     suspend fun setAutoSave(v: Boolean) = store.edit { it[K.AUTOSAVE] = if (v) "1" else "0" }
     suspend fun setSort(v: SortOrder) = store.edit { it[K.SORT] = v.name }
     suspend fun setGrid(v: Int) = store.edit { it[K.GRID] = v.coerceIn(0, 4) }
+    suspend fun setViewMode(v: HomeViewMode) = store.edit { it[K.VIEW] = v.name }
 }
