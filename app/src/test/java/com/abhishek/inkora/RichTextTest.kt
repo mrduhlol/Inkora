@@ -127,7 +127,7 @@ class RichTextTest {
     }
 
     @Test fun corruptRich fallsBackToStrippedText() {
-        val c = RichText.migrate("{not json **hi**", "rich-v1")
+        val c = RichText.migrate("{not json **hi**!", "rich-v1")
         assertTrue(c.text.contains("hi"))
         assertTrue(!c.text.contains("**"))
     }
