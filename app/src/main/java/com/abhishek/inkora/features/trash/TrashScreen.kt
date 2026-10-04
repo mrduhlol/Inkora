@@ -16,6 +16,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -58,7 +59,7 @@ fun TrashScreen(onBack: () -> Unit, vm: TrashViewModel = hiltViewModel()) {
                 )
             }
             if (items.isEmpty()) {
-                item { Text("Trash is empty.", Modifier.padding(androidx.compose.ui.unit.dp(24))) }
+                item { Text("Trash is empty.", Modifier.padding(24.dp)) }
             }
         }
     }
