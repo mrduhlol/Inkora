@@ -437,7 +437,7 @@ private fun AttachmentStrip(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(attachments, key = { it.id }) { a ->
-            Box(Modifier.size(88.dp).clip(RoundedCornerShape(10.dp)).clickable { onOpen(a) } {
+            Box(Modifier.size(88.dp).clip(RoundedCornerShape(10.dp)).clickable(onClick = { onOpen(a) })) {
                 LocalImageThumb(a.file, Modifier.fillMaxSize())
                 IconButton(
                     onClick = { confirming = a.id },
