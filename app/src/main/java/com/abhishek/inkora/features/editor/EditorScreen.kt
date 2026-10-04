@@ -1,8 +1,14 @@
 package com.abhishek.inkora.features.editor
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,20 +17,32 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -36,35 +54,45 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.abhishek.inkora.data.repository.Attachment
 import com.abhishek.inkora.domain.model.BlockKind
 import com.abhishek.inkora.domain.model.PageStyle
 import com.abhishek.inkora.domain.model.PaperBackground
+import com.abhishek.inkora.domain.model.ParaAlign
 import com.abhishek.inkora.domain.model.SpanKind
 import com.abhishek.inkora.ui.components.FormattingToolbar
 import com.abhishek.inkora.ui.components.InkoraPaperSurface
 import com.abhishek.inkora.ui.components.InkoraTopBar
+import com.abhishek.inkora.ui.components.LocalImageFull
+import com.abhishek.inkora.ui.components.LocalImageThumb
 import com.abhishek.inkora.ui.components.PageStyleSelector
 import com.abhishek.inkora.ui.theme.mutedOnPaperColor
 import com.abhishek.inkora.ui.theme.onPaperColor
 import com.abhishek.inkora.ui.theme.paperColorFor
 
 /**
- * Notebook-page editor over [RichDoc]: selection-scoped spans, generated list
- * glyphs, checkbox tap-to-toggle, undo/redo and autosave.
+ * Notebook-page editor over [RichDoc]: selection-scoped spans, headings,
+ * quotes, dividers, alignment, indent, generated list glyphs, checkbox
+ * tap-to-toggle, local image attachments, undo/redo and autosave.
  *
  * Layout when the keyboard is open: PAGE → TOOLBAR → KEYBOARD. The toolbar is
  * part of the content column with [imePadding] so it rides directly above the
@@ -78,11 +106,19 @@ fun EditorScreen(
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val folders by vm.allFolders.collectAsStateWithLifecycle()
+    val attachments by vm.attachments.collectAsStateWithLifecycle()
     var menu by remember { mutableStateOf(false) }
     var styleSheet by remember { mutableStateOf(false) }
     var folderDialog by remember { mutableStateOf(false) }
+    var infoDialog by remember { mutableStateOf(false) }
+    var viewer by remember { mutableStateOf<Attachment?>(null) }
     val note = state.note
     val titleFocus = remember { FocusRequester() }
+    val snackbar = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) vm.addImage(uri)
+    }
 
     if (state.notFound) {
         Scaffold { pad ->
@@ -96,17 +132,26 @@ fun EditorScreen(
     LaunchedEffect(note?.id, isFresh) {
         if (isFresh) titleFocus.requestFocus()
     }
+    LaunchedEffect(state.saveError) {
+        state.saveError?.let { snackbar.showSnackbar(it); vm.dismissSaveError() }
+    }
 
     val paper = paperColorFor(note?.backgroundStyle ?: "cream", note?.backgroundColor)
     val ink = onPaperColor(paper)
     val muted = mutedOnPaperColor(paper)
     val doc = state.doc
-    val annotated = remember(doc, muted) { doc.render(muted) }
+    val accent = MaterialTheme.colorScheme.primary
+    val currentAlign = remember(doc, doc.selection) {
+        val li = doc.lineIndexAtRendered(doc.selection.min)
+        doc.lines.getOrNull(li)?.align ?: ParaAlign.LEFT
+    }
+    val annotated = remember(doc, muted, accent) { doc.render(muted, accent) }
     val field = remember(annotated, doc.selection) { TextFieldValue(annotated, doc.selection) }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val prefixRanges = remember(doc) { doc.prefixRanges() }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             InkoraTopBar(
                 title = state.title,
@@ -124,6 +169,31 @@ fun EditorScreen(
                     DropdownMenuItem(
                         text = { Text("Move to folder") },
                         onClick = { menu = false; folderDialog = true }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Add image") },
+                        leadingIcon = { Icon(Icons.Filled.AddPhotoAlternate, null) },
+                        onClick = {
+                            menu = false
+                            picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Note info") },
+                        leadingIcon = { Icon(Icons.Filled.Info, null) },
+                        onClick = { menu = false; infoDialog = true }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Share") },
+                        leadingIcon = { Icon(Icons.Filled.Share, null) },
+                        onClick = {
+                            menu = false
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, vm.shareText())
+                            }
+                            context.startActivity(Intent.createChooser(send, "Share note"))
+                        }
                     )
                     HorizontalDivider()
                     DropdownMenuItem(
@@ -196,11 +266,20 @@ fun EditorScreen(
                     }
                 }
             }
-            // Toolbar rides above the keyboard via IME insets; zero extra space
-            // when the keyboard is dismissed.
+            // Attachments strip, then the toolbar riding above the keyboard via
+            // IME insets (zero extra space when the keyboard is dismissed).
+            if (attachments.isNotEmpty()) {
+                AttachmentStrip(
+                    attachments = attachments,
+                    onOpen = { viewer = it },
+                    onRemove = { vm.removeImage(it) },
+                    onAdd = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+                )
+            }
             FormattingToolbar(
                 active = doc.activeKinds(),
                 blocks = doc.activeBlocks(),
+                align = currentAlign,
                 canUndo = state.canUndo,
                 canRedo = state.canRedo,
                 onUndo = vm::undo,
@@ -212,6 +291,12 @@ fun EditorScreen(
                 onBullet = { vm.toggleBlock(BlockKind.BULLET) },
                 onNumbered = { vm.toggleBlock(BlockKind.NUMBERED) },
                 onChecklist = { vm.toggleBlock(BlockKind.CHECK) },
+                onHeading = vm::cycleHeading,
+                onQuote = vm::toggleQuote,
+                onDivider = vm::insertDivider,
+                onAlign = vm::cycleAlign,
+                onIndentMore = vm::indentMore,
+                onIndentLess = vm::indentLess,
                 modifier = Modifier.navigationBarsPadding().imePadding()
             )
         }
@@ -226,10 +311,11 @@ fun EditorScreen(
                 text = {
                     Column {
                         val current = note?.folderId
-                        androidx.compose.foundation.layout.Row(
-                            Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                        ) {
-                            Text("No folder", Modifier.weight(1f).align(androidx.compose.ui.Alignment.CenterVertically))
+                        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                            Text(
+                                "No folder",
+                                Modifier.weight(1f).align(Alignment.CenterVertically)
+                            )
                             RadioButton(
                                 selected = current == null,
                                 onClick = { vm.moveToFolder(null) }
@@ -259,6 +345,46 @@ fun EditorScreen(
             )
         }
 
+        val viewing = viewer
+        if (viewing != null) {
+            Dialog(
+                onDismissRequest = { viewer = null },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Box(Modifier.fillMaxSize().background(Color.Black).padding(16.dp)) {
+                    LocalImageFull(viewing.file, Modifier.fillMaxSize().align(Alignment.Center))
+                    IconButton(
+                        onClick = { viewer = null },
+                        modifier = Modifier.align(Alignment.TopEnd)
+                    ) {
+                        Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White)
+                    }
+                }
+            }
+        }
+
+        if (infoDialog && note != null) {
+            val stats = remember(state.doc, state.title) { vm.stats() }
+            val folderName = folders.firstOrNull { it.id == note.folderId }?.name ?: "No folder"
+            AlertDialog(
+                onDismissRequest = { infoDialog = false },
+                confirmButton = { TextButton(onClick = { infoDialog = false }) { Text("Close") } },
+                title = { Text("Note info") },
+                text = {
+                    Column {
+                        InfoRow("Created", formatDate(note.createdAt))
+                        InfoRow("Modified", formatDate(note.updatedAt))
+                        InfoRow("Words", stats.words.toString())
+                        InfoRow("Characters", stats.chars.toString())
+                        InfoRow("Folder", folderName)
+                        InfoRow("Favorite", if (note.isFavorite) "Yes" else "No")
+                        InfoRow("Pinned", if (note.isPinned) "Yes" else "No")
+                        InfoRow("Images", attachments.size.toString())
+                    }
+                }
+            )
+        }
+
         if (styleSheet) {
             ModalBottomSheet(onDismissRequest = { styleSheet = false }, sheetState = rememberModalBottomSheetState()) {
                 Column(Modifier.padding(20.dp)) {
@@ -282,5 +408,65 @@ fun EditorScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun InfoRow(label: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+private fun formatDate(millis: Long): String =
+    java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+        .format(java.util.Date(millis))
+
+/** Horizontal strip of attached image cards with remove actions and an add tile. */
+@Composable
+private fun AttachmentStrip(
+    attachments: List<Attachment>,
+    onOpen: (Attachment) -> Unit,
+    onRemove: (Long) -> Unit,
+    onAdd: () -> Unit
+) {
+    var confirming: Long? by remember { mutableStateOf(null) }
+    LazyRow(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(attachments, key = { it.id }) { a ->
+            Box(Modifier.size(88.dp).clip(RoundedCornerShape(10.dp)).clickable { onOpen(a) } {
+                LocalImageThumb(a.file, Modifier.fillMaxSize())
+                IconButton(
+                    onClick = { confirming = a.id },
+                    modifier = Modifier.align(Alignment.TopEnd).size(32.dp)
+                ) {
+                    Icon(Icons.Filled.Close, contentDescription = "Remove image", tint = Color.White)
+                }
+            }
+        }
+        item {
+            Card(
+                onClick = onAdd,
+                modifier = Modifier.size(88.dp),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.AddPhotoAlternate, contentDescription = "Add image")
+                }
+            }
+        }
+    }
+    val doomed = confirming
+    if (doomed != null) {
+        AlertDialog(
+            onDismissRequest = { confirming = null },
+            confirmButton = { TextButton(onClick = { onRemove(doomed); confirming = null }) { Text("Remove") } },
+            dismissButton = { TextButton(onClick = { confirming = null }) { Text("Keep") } },
+            title = { Text("Remove image?") },
+            text = { Text("The image file is deleted from this device.") }
+        )
     }
 }
