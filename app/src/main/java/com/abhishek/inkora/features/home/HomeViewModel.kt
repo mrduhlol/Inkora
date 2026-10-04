@@ -27,6 +27,7 @@ data class HomeUiState(
     val notes: List<Note> = emptyList(), // unpinned, sorted
     val query: String = "",
     val viewMode: HomeViewMode = HomeViewMode.GRID,
+    val sortOrder: SortOrder = SortOrder.UPDATED_DESC,
     val gridColumns: Int = 0,
     val isSearching: Boolean = false,
     val selection: Set<Long> = emptySet(),
@@ -56,12 +57,12 @@ class HomeViewModel @Inject constructor(
             if (q.isBlank()) {
                 val (pinned, rest) = partition(all, settings.sortOrder)
                 kotlinx.coroutines.flow.flowOf(
-                    HomeUiState(pinned, rest, "", settings.viewMode, settings.gridColumns, false, sel, folderList)
+                    HomeUiState(pinned, rest, "", settings.viewMode, settings.sortOrder, settings.gridColumns, false, sel, folderList)
                 )
             } else {
                 notes.searchNotes(q.trim()).combine(settingsRepo.settings) { found, s ->
                     val (pinned, rest) = partition(found, s.sortOrder)
-                    HomeUiState(pinned, rest, q, s.viewMode, s.gridColumns, true, sel, folderList)
+                    HomeUiState(pinned, rest, q, s.viewMode, s.sortOrder, s.gridColumns, true, sel, folderList)
                 }
             }
         }
