@@ -1,13 +1,16 @@
 package com.abhishek.inkora.features.settings
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -17,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -39,25 +43,25 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = hiltViewModel()) 
         }
     ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(20.dp)) {
-            Text("Appearance", style = MaterialTheme.typography.titleLarge)
-            Text("Theme", modifier = Modifier.padding(top = 12.dp))
+            Section("Appearance")
+            Label("Theme")
             ThemeSelector(selected = s.theme, onSelect = vm::setTheme)
-            Text("Accent", modifier = Modifier.padding(top = 12.dp))
+            Label("Accent", top = 16.dp)
             AccentColorSelector(selected = s.accent, onSelect = vm::setAccent)
-            androidx.compose.foundation.layout.Row(Modifier.padding(top = 12.dp)) {
-                Text("Dynamic color", Modifier.weight(1f))
+            SettingRow("Dynamic color", "Follow the system palette when available") {
                 Switch(checked = s.dynamicColor, onCheckedChange = vm::setDynamic)
             }
-            Text("Editor", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 20.dp))
-            Text("Default page style", modifier = Modifier.padding(top = 8.dp))
+            HorizontalDivider(Modifier.padding(vertical = 20.dp))
+            Section("Editor")
+            Label("Default page style")
             PageStyleSelector(selected = s.defaultPageStyle, onSelect = vm::setDefStyle)
-            androidx.compose.foundation.layout.Row(Modifier.padding(top = 12.dp)) {
-                Text("Auto-save", Modifier.weight(1f))
+            SettingRow("Auto-save", "Notes save themselves as you write") {
                 Switch(checked = s.autoSave, onCheckedChange = vm::setAutoSave)
             }
-            Text("Notes", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 20.dp))
-            Text("Sort: ${s.sortOrder.key}", modifier = Modifier.padding(top = 8.dp))
-            androidx.compose.foundation.layout.Row {
+            HorizontalDivider(Modifier.padding(vertical = 20.dp))
+            Section("Notes")
+            Label("Sort order")
+            Row(Modifier.padding(top = 4.dp)) {
                 SortOrder.entries.forEach {
                     androidx.compose.material3.FilterChip(
                         selected = it == s.sortOrder,
@@ -67,8 +71,40 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = hiltViewModel()) 
                     )
                 }
             }
-            Text("About", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 20.dp))
-            Text("Inkora 1.0.0 — offline-first notebook. No account, no cloud, no tracking.", modifier = Modifier.padding(top = 8.dp))
+            HorizontalDivider(Modifier.padding(vertical = 20.dp))
+            Section("About")
+            Text(
+                "Inkora 1.2 — offline-first notebook. No account, no cloud, no tracking.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
+    }
+}
+
+@Composable
+private fun Section(title: String) {
+    Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+}
+
+@Composable
+private fun Label(text: String, top: androidx.compose.ui.unit.Dp = 12.dp) {
+    Text(
+        text,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = top, bottom = 8.dp)
+    )
+}
+
+@Composable
+private fun SettingRow(title: String, subtitle: String, control: @Composable () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        control()
     }
 }
