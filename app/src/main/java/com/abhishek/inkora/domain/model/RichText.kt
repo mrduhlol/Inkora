@@ -16,19 +16,25 @@ import kotlinx.serialization.json.Json
  */
 enum class SpanKind { BOLD, ITALIC, UNDERLINE, STRIKE }
 
-enum class BlockKind { PARAGRAPH, BULLET, NUMBERED, CHECK }
+enum class BlockKind { PARAGRAPH, BULLET, NUMBERED, CHECK, HEADING1, HEADING2, HEADING3, QUOTE, DIVIDER }
+
+enum class ParaAlign { LEFT, CENTER, RIGHT, JUSTIFY }
 
 @Serializable
 data class RichSpan(val start: Int, val end: Int, val kind: SpanKind)
 
 @Serializable
-data class RichBlock(val line: Int, val kind: BlockKind, val checked: Boolean = false)
+data class RichBlock(val line: Int, val kind: BlockKind, val checked: Boolean = false, val indent: Int = 0)
+
+@Serializable
+data class RichAlign(val line: Int, val align: ParaAlign)
 
 @Serializable
 data class RichContent(
     val text: String = "",
     val spans: List<RichSpan> = emptyList(),
-    val blocks: List<RichBlock> = emptyList()
+    val blocks: List<RichBlock> = emptyList(),
+    val aligns: List<RichAlign> = emptyList()
 )
 
 private val RichJson = Json { ignoreUnknownKeys = true }
@@ -132,13 +138,25 @@ object RichText {
     }
 
     /**
-     * Enter key on [line]: empty list item exits to PARAGRAPH; otherwise the
-     * caller splits the text and the new line inherits the list kind.
+     * Enter key on [line]: empty list item exits to PARAGRAPH; list kinds
+     * continue; headings/quotes/dividers always break to PARAGRAPH.
      * Returns the block list for text with [newLineCount] lines after the split.
      */
     fun enterBlocks(c: RichContent, line: Int, lineTextIsBlank: Boolean, newLineCount: Int): List<RichBlock> {
         val cur = blockAt(c, line).kind
-        if (cur == BlockKind.PARAGRAPH) return c.blocks
+        if (cur == BlockKind.PARAGRAPH || cur == BlockKind.DIVIDER) {
+            return c.blocks.filter { it.line != line || cur == BlockKind.PARAGRAPH }
+                .map { if (it.line > line) it.copy(line = it.line + 1) else it }
+                .sortedBy { it.line }
+        }
+        if (cur == BlockKind.HEADING1 || cur == BlockKind.HEADING2 ||
+            cur == BlockKind.HEADING3 || cur == BlockKind.QUOTE
+        ) {
+            // Structural one-liners never continue: new line is a paragraph.
+            return c.blocks
+                .map { if (it.line > line) it.copy(line = it.line + 1) else it }
+                .sortedBy { it.line }
+        }
         if (lineTextIsBlank) {
             return c.blocks.filter { it.line != line }
                 .map { if (it.line > line) it.copy(line = it.line + 1) else it }
@@ -170,11 +188,15 @@ object RichText {
         val lines = linesOf(c.text)
         var n = 0
         return lines.mapIndexed { i, l ->
-            when (blockAt(c, i).kind) {
-                BlockKind.BULLET -> "• $l"
-                BlockKind.NUMBERED -> { n += 1; "$n. $l" }
-                BlockKind.CHECK -> (if (blockAt(c, i).checked) "☑ " else "☐ ") + l
-                BlockKind.PARAGRAPH -> { l }
+            val b = blockAt(c, i)
+            val indented = "  ".repeat(b.indent.coerceIn(0, 4)) + l
+            when (b.kind) {
+                BlockKind.BULLET -> "• $indented"
+                BlockKind.NUMBERED -> { n += 1; "$n. $indented" }
+                BlockKind.CHECK -> (if (b.checked) "☑ " else "☐ ") + indented
+                BlockKind.QUOTE -> "“$l”"
+                BlockKind.DIVIDER -> "──────────"
+                else -> indented
             }
         }.joinToString("\n").also { }
     }
