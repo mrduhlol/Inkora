@@ -53,8 +53,12 @@ fun InkoraPaperPreview(
         val ink = onPaperColor(paper)
         val muted = mutedOnPaperColor(paper)
         // Clean excerpt: rich payloads render with glyphs, legacy markers stripped.
+        // Title falls back to the first content line; empty notes get a subtle hint.
         val excerpt = remember(note.content, note.contentFormat) {
-            RichText.previewText(note.content, note.contentFormat).ifBlank { "No text yet" }
+            RichText.previewText(note.content, note.contentFormat)
+        }
+        val displayTitle = remember(note.title, note.content, note.contentFormat) {
+            RichText.displayTitle(note.title, note.content, note.contentFormat)
         }
         InkoraPaperSurface(
             modifier = Modifier.fillMaxWidth().height(190.dp),
@@ -64,7 +68,7 @@ fun InkoraPaperPreview(
         ) {
             Column(Modifier.fillMaxWidth().padding(14.dp)) {
                 Text(
-                    text = note.title.ifBlank { "Untitled" },
+                    text = displayTitle.ifBlank { "Untitled" },
                     style = MaterialTheme.typography.titleMedium,
                     color = ink,
                     maxLines = 2,
@@ -72,7 +76,7 @@ fun InkoraPaperPreview(
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = excerpt,
+                    text = excerpt.ifBlank { "No text yet" },
                     style = MaterialTheme.typography.bodyMedium,
                     color = muted,
                     maxLines = 5,
