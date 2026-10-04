@@ -1,6 +1,9 @@
 package com.abhishek.inkora.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,17 +36,30 @@ import com.abhishek.inkora.ui.theme.paperColorFor
  * Small sheet-of-paper preview with folded corner, real title + clean content.
  * Formatted notes render as readable text — raw markers are never shown.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun InkoraPaperPreview(
     note: Note,
     onOpen: (Long) -> Unit,
     onToggleFavorite: (Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    selected: Boolean = false,
+    selecting: Boolean = false,
+    onToggleSelect: ((Long) -> Unit)? = null
 ) {
     Box(
         modifier
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-            .clickable(onClick = { onOpen(note.id) })
+            .background(
+                if (selected) MaterialTheme.colorScheme.primaryContainer
+                else Color.Transparent
+            )
+            .combinedClickable(
+                onClick = {
+                    if (selecting) onToggleSelect?.invoke(note.id) else onOpen(note.id)
+                },
+                onLongClick = { onToggleSelect?.invoke(note.id) }
+            )
             .semantics { contentDescription = "Open note ${note.title.ifBlank { "untitled" }}" }
     ) {
         val bgKey = note.backgroundStyle.ifBlank { "cream" }.let {
@@ -94,6 +111,14 @@ fun InkoraPaperPreview(
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(10.dp).size(18.dp)
                     .clickable { onToggleFavorite(note.id) }
+            )
+        }
+        if (note.isPinned) {
+            Icon(
+                Icons.Filled.PushPin,
+                contentDescription = "Pinned",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.align(Alignment.BottomStart).padding(10.dp).size(16.dp)
             )
         }
     }
