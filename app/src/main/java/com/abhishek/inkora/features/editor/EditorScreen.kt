@@ -1,5 +1,6 @@
 package com.abhishek.inkora.features.editor
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
@@ -13,23 +14,31 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -68,15 +77,24 @@ fun EditorScreen(
     vm: EditorViewModel = hiltViewModel()
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val folders by vm.allFolders.collectAsStateWithLifecycle()
     var menu by remember { mutableStateOf(false) }
     var styleSheet by remember { mutableStateOf(false) }
+    var folderDialog by remember { mutableStateOf(false) }
     val note = state.note
+    val titleFocus = remember { FocusRequester() }
 
     if (state.notFound) {
         Scaffold { pad ->
             Text("Note not found or in Trash.", Modifier.padding(pad).padding(24.dp))
         }
         return
+    }
+
+    // New blank note: focus the title immediately so creation feels instant.
+    val isFresh = note != null && state.title.isBlank() && state.doc.lines.all { it.text.isBlank() }
+    LaunchedEffect(note?.id, isFresh) {
+        if (isFresh) titleFocus.requestFocus()
     }
 
     val paper = paperColorFor(note?.backgroundStyle ?: "cream", note?.backgroundColor)
@@ -103,6 +121,10 @@ fun EditorScreen(
                         text = { Text("Page style") },
                         onClick = { menu = false; styleSheet = true }
                     )
+                    DropdownMenuItem(
+                        text = { Text("Move to folder") },
+                        onClick = { menu = false; folderDialog = true }
+                    )
                     HorizontalDivider()
                     DropdownMenuItem(
                         text = { Text("Move to Trash") },
@@ -126,13 +148,14 @@ fun EditorScreen(
                         onValueChange = vm::onTitleChange,
                         placeholder = { Text("Title", color = muted) },
                         singleLine = true,
-                        textStyle = TextStyle(color = ink, fontSize = 20.sp),
+                        textStyle = MaterialTheme.typography.titleLarge.copy(color = ink),
+                        modifier = Modifier.fillMaxWidth().focusRequester(titleFocus),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            cursorColor = ink,
+                            cursorColor = MaterialTheme.colorScheme.primary,
                             focusedPlaceholderColor = muted,
                             unfocusedPlaceholderColor = muted
                         )
@@ -160,7 +183,7 @@ fun EditorScreen(
                                 }
                             },
                             textStyle = TextStyle(color = ink, fontSize = state.textSizeSp.sp),
-                            cursorBrush = SolidColor(ink),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                             decorationBox = { inner ->
                                 Box {
                                     if (field.text.isEmpty()) {
@@ -177,6 +200,7 @@ fun EditorScreen(
             // when the keyboard is dismissed.
             FormattingToolbar(
                 active = doc.activeKinds(),
+                blocks = doc.activeBlocks(),
                 canUndo = state.canUndo,
                 canRedo = state.canRedo,
                 onUndo = vm::undo,
@@ -189,6 +213,49 @@ fun EditorScreen(
                 onNumbered = { vm.toggleBlock(BlockKind.NUMBERED) },
                 onChecklist = { vm.toggleBlock(BlockKind.CHECK) },
                 modifier = Modifier.navigationBarsPadding().imePadding()
+            )
+        }
+
+        if (folderDialog) {
+            AlertDialog(
+                onDismissRequest = { folderDialog = false },
+                confirmButton = {
+                    TextButton(onClick = { folderDialog = false }) { Text("Done") }
+                },
+                title = { Text("Move to folder") },
+                text = {
+                    Column {
+                        val current = note?.folderId
+                        androidx.compose.foundation.layout.Row(
+                            Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        ) {
+                            Text("No folder", Modifier.weight(1f).align(androidx.compose.ui.Alignment.CenterVertically))
+                            RadioButton(
+                                selected = current == null,
+                                onClick = { vm.moveToFolder(null) }
+                            )
+                        }
+                        folders.forEach { f ->
+                            ListItem(
+                                headlineContent = { Text(f.name) },
+                                trailingContent = {
+                                    RadioButton(
+                                        selected = current == f.id,
+                                        onClick = { vm.moveToFolder(f.id) }
+                                    )
+                                },
+                                modifier = Modifier.clickable { vm.moveToFolder(f.id) }
+                            )
+                        }
+                        if (folders.isEmpty()) {
+                            Text(
+                                "No folders yet — create one from the Folders screen.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             )
         }
 
