@@ -36,5 +36,8 @@ enum class AccentColor(val key: String) {
     RED("red"), PINK("pink"), TEAL("teal")
 }
 enum class SortOrder(val key: String) {
-    UPDATED_DESC("updated_desc"), CREATED_DESC("created_desc"), TITLE_ASC("title_asc")
+    UPDATED_DESC("updated_desc"), CREATED_DESC("created_desc"),
+    TITLE_ASC("title_asc"), TITLE_DESC("title_desc")
 }
+
+enum class HomeViewMode(val key: String) { GRID("grid"), LIST("list") }
