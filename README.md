@@ -1,83 +1,121 @@
-# INKORA — Native Android Notes
+# ✒️ INKORA — a quiet notebook for Android
 
-Offline-first, native Android note-taking app (Kotlin + Jetpack Compose + Material 3 + Room).
+![CI](https://github.com/mrduhlol/Inkora/actions/workflows/android.yml/badge.svg)
+![Release](https://img.shields.io/github/v/release/mrduhlol/Inkora?label=v1.0&color=6750A4)
+![Platform](https://img.shields.io/badge/platform-Android%2026%2B-3DDC84)
+![Offline](https://img.shields.io/badge/offline-100%25-FAF3E3)
+![Stack](https://img.shields.io/badge/Kotlin_·_Compose_·_Room-6750A4)
 
-> Home is a clean notebook. Notes look like small sheets of paper with a folded
-> top-right corner. Opening a note reveals a paper-like editor with autosave.
-> No account, no network, no analytics. Everything stays on-device.
+> **Home is a clean notebook. Notes are small sheets of paper with a folded
+> corner. Tap one and it opens like a real page — and it saves itself.**
+> No account. No cloud. No tracking. Everything stays on your device.
 
-## Stack
+<p align="center">
+  <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.0-debug.apk">
+    <img src="https://img.shields.io/badge/⬇_Download_Inkora_v1.0_APK-6750A4?style=for-the-badge&logo=android&logoColor=white" alt="Download Inkora v1.0 APK" />
+  </a>
+</p>
 
-- Kotlin, Jetpack Compose, Material 3, AndroidX
-- Room (single source of truth), DataStore (preferences)
-- Coroutines + StateFlow + ViewModel, Repository pattern
-- Navigation Compose, Hilt, Gradle Kotlin DSL + Version Catalog
+<p align="center">
+  <sub>Android 8.0+ · ~15 MB · install via <b>Allow unknown apps</b> → open the APK · updates via future releases</sub><br />
+  <sub>Prefer QR / mirror? Grab <code>Inkora-v1.0-debug.apk</code> from <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.0">Releases → v1.0</a>.</sub>
+</p>
 
-## Architecture
+---
+
+## ✨ What v1.0 feels like
+
+| Home — paper grid | Editor — a real page |
+|---|---|
+| `INKORA` wordmark, lots of breathing room | Large paper surface, not a form |
+| Notes look like sheets with a **folded top-right corner** (drawn in Compose, no images) | Title + body, cursor, keyboard, copy/paste, select |
+| Real title + real content in every preview — never lorem ipsum | **Autosave** — debounced Room writes, flush on back. Never asks “did I save?” |
+| Responsive: **2 columns** on phones, 3–4 on tablets | Bottom **formatting bar**: bold · italic · underline · strike · bullets · numbered · checklist |
+
+**Paper, your way.** Backgrounds — white · cream · gray · dark (+ custom hex) — crossed with styles — blank · ruled · grid · dotted. Each note remembers its own paper, on Home *and* in the editor.
+
+**Calm theming.** System / Light / Dark / **AMOLED**, 7 accents (blue · purple · green · orange · red · pink · teal), Material 3 + dynamic color that never hijacks Inkora’s identity.
+
+**Everything offline.** Create, edit, trash, restore, favorite, archive, search, folders — with airplane mode on. Notes survive app kill, force-stop, and reboot via Room.
+
+## 📦 What’s inside v1.0
+
+- [x] Home grid + paper preview + folded corner + empty state
+- [x] Bottom-**left** `+` FAB → instant note, straight into editor
+- [x] Editor with autosave + Markdown foundation (`**bold**`, `_italic_`, `<u>`, `~~strike~~`, `- `, `1. `, `- [ ]`)
+- [x] Page styles + paper backgrounds (persisted per note)
+- [x] Local search across title + content (Room queries, debounced)
+- [x] Favorites (star on preview + dedicated screen)
+- [x] Archive + Trash (soft-delete via `isDeleted`, restore, permanent delete)
+- [x] Folders (create / rename / delete — deleting a folder keeps its notes)
+- [x] Settings via DataStore (theme, accent, dynamic, defaults, sort, grid)
+- [x] Accessibility: 48dp targets, content descriptions, scalable type, contrast
+- [x] Tests: Room persistence + Compose UI
+
+**Deliberately not in v1.0** (architected for, not shipped): handwriting, images/PDF/audio, AI, cloud sync, Inkora-web. V1 is the stable paper foundation.
+
+## 🏗️ How it’s built
+
+**Native Android only.** Kotlin · Jetpack Compose · Material 3 · Room · DataStore · Coroutines/StateFlow · ViewModel · Repository pattern · Navigation Compose · Hilt · Gradle Kotlin DSL + Version Catalog.
 
 ```
-UI (Compose screens, components)
- ↓ StateFlow
-ViewModel
- ↓ suspend / Flow
-Repository (domain interface → data impl)
- ↓
-Room DAO → InkoraDatabase → device storage
+Compose screens / components
+  ↓ StateFlow (lifecycle-aware)
+ViewModel (no Android framework, testable)
+  ↓ suspend / Flow
+Repository interface → impl (domain ↔ data mapping)
+  ↓
+Room DAO → InkoraDatabase → on-device storage
 ```
 
-- Composables never touch Room directly.
-- Business logic lives in ViewModel / Repository, not in UI.
-- Rich-text-ready content model: V1 stores Markdown-ish plain text in
-  `content` plus `contentFormat` (`"md-v1"`), so V2/V3 (drawings, images,
-  audio, PDF) can add tables/attachments without rewriting the schema.
-
-## Offline-first
-
-Create / edit / delete / restore / favorite / search / archive / folders all
-work with zero connectivity. Notes persist across process death and reboot via
-Room. No `SharedPreferences` for notes.
-
-## Project layout
+> **Content-format note:** V1 stores lightweight Markdown-ish text with a `contentFormat = "md-v1"` tag. V2+ attachments (drawings, images, audio, PDF) land in side tables keyed by `noteId` — no rewrite of the notes table.
 
 ```
 app/src/main/java/com/abhishek/inkora/
-  data/local/database/  (InkoraDatabase, NoteDao, FolderDao, entities)
-  data/repository/      (NoteRepositoryImpl, FolderRepositoryImpl, SettingsRepository)
-  domain/model/         (Note, Folder, PageStyle, enums)
-  domain/repository/    (interfaces)
-  di/                   (Hilt modules)
-  ui/theme/             (Color, Theme, Type, InkoraTokens)
-  ui/navigation/        (InkoraNav)
-  ui/components/        (Paper preview, FoldedCorner, FAB, TopBar, Grid, toolbars…)
-  features/home/ editor/ settings/ trash/ favorites/ folders/
+  data/local/database/  InkoraDatabase · NoteDao · FolderDao · entities/
+  data/repository/      NoteRepositoryImpl · FolderRepositoryImpl · SettingsRepository · SeedDemoNotesUseCase (debug only)
+  domain/model/        Note · Folder · PageStyle · PaperBackground · AppTheme · AccentColor · SortOrder
+  domain/repository/   NoteRepository · FolderRepository
+  di/                  DatabaseModule · RepositoryModule
+  ui/theme/            Color · Theme · Type  (single source of tokens — no scattered hex)
+  ui/navigation/       InkoraNav (type-safe routes)
+  ui/components/       InkoraPaperPreview · InkoraPaperSurface · FoldedCorner · InkoraFab · InkoraTopBar · NoteGrid · EmptyNotesState · FormattingToolbar · PageStyleSelector · AccentColorSelector · ThemeSelector
+  features/home · editor · settings · trash · favorites · folders · archive
+  MainActivity · InkoraApp
 ```
 
-## Build
+## 🚀 Get it
 
-Requirements: JDK 17+, Android SDK 34, Android Studio Ladybug+.
+**Option A — download (easiest).** Tap the button at the top, or:
+
+👉 **[Download Inkora v1.0 APK](https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.0-debug.apk)**
+
+Then: `Allow install from unknown apps` → open the file → write your first page.
+
+**Option B — build it.** Needs JDK 17 + Android SDK 34 + Android Studio Ladybug+:
 
 ```powershell
-# open in Android Studio, let it sync, then:
-.\gradlew :app:assembleDebug
-.\gradlew :app:testDebugUnitTest
+.\gradlew :app:assembleDebug        # APK → app/build/outputs/apk/debug/
+.\gradlew :app:testDebugUnitTest    # Room persistence tests (Robolectric)
 ```
 
-First launch seeds nothing into the user's DB. A debug-only sample dataset
-(Physics Notes, Project Ideas…) is available via `SeedDemoNotesUseCase` and is
-never forced into release builds.
+CI builds every push to `main` the same way (`.github/workflows/android.yml`) and attaches the APK to every `v*` tag automatically.
 
-## V1 scope
+## 🔒 Privacy
 
-Home grid (2-col phones, adaptive tablets), paper preview with Compose-drawn
-folded corner, bottom-left `+` FAB with instant persist + autosave editor,
-title/body, bold/italic/underline/strike + bullet/numbered/checklist,
-page backgrounds (white/cream/gray/dark/custom) × styles (blank/ruled/grid/dotted),
-theming (system/light/dark/AMOLED + accent + dynamic color), search (Room FTS-like
-`LIKE` queries), favorites, archive/trash/restore, folders, DataStore settings.
+No `INTERNET` permission for core notes. No analytics, ads, accounts, or servers. Your words never leave the phone unless *you* copy them out. Cloud sync is a post-V4 opt-in idea, never a requirement.
 
-Future (architected, not implemented): handwriting/drawing, images/PDF/audio,
-AI, cloud sync, Inkora-web.
+## 🗺️ Roadmap
 
-## Privacy
+- **V2** — pen/pencil/brush/highlighter, shapes, stylus + pressure, images, camera, PDF import/annotate
+- **V3** — audio, speech-to-text, OCR, handwriting recognition, deeper search
+- **V4** — Inkora AI (summaries, flashcards, quizzes, grammar) — on-device first
+- **V5** — optional account + cross-device sync · **Inkora-web** companion
 
-No network permission required for core notes. No analytics/ads SDKs.
+## 🤝 Contribute / file bugs
+
+Issues and PRs welcome. Keep the notebook calm: no gradients-for-fun, no dashboard clutter, no fake buttons — every visible control must work.
+
+---
+
+<p align="center"><b>INKORA v1.0</b> — write quietly. · <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.0">Release notes</a> · <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.0-debug.apk">Download APK</a></p>
