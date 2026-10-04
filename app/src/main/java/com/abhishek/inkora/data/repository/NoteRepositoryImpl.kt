@@ -12,6 +12,7 @@ private fun NoteEntity.toDomain() = Note(
     id = id, title = title, content = content, contentFormat = contentFormat,
     createdAt = createdAt, updatedAt = updatedAt,
     isFavorite = isFavorite, isArchived = isArchived, isDeleted = isDeleted,
+    isPinned = isPinned,
     folderId = folderId, backgroundStyle = backgroundStyle,
     backgroundColor = backgroundColor, textColor = textColor, pageStyle = pageStyle
 )
@@ -21,6 +22,7 @@ private fun Note.toEntity(now: Long = System.currentTimeMillis()) = NoteEntity(
     createdAt = if (createdAt == 0L) now else createdAt,
     updatedAt = now,
     isFavorite = isFavorite, isArchived = isArchived, isDeleted = isDeleted,
+    isPinned = isPinned,
     folderId = folderId, backgroundStyle = backgroundStyle,
     backgroundColor = backgroundColor, textColor = textColor, pageStyle = pageStyle
 )
@@ -42,6 +44,15 @@ class NoteRepositoryImpl @Inject constructor(
     override suspend fun restore(id: Long) = dao.restore(id)
     override suspend fun deleteForever(id: Long) = dao.deleteForever(id)
     override suspend fun setFavorite(id: Long, favorite: Boolean) = dao.setFavorite(id, favorite)
+    override suspend fun setPinned(id: Long, pinned: Boolean) = dao.setPinned(id, pinned)
     override suspend fun setArchived(id: Long, archived: Boolean) = dao.setArchived(id, archived)
     override suspend fun moveToFolder(id: Long, folderId: Long?) = dao.moveToFolder(id, folderId)
+    override suspend fun duplicate(id: Long): Long? {
+        val src = dao.getById(id) ?: return null
+        val now = System.currentTimeMillis()
+        val base = if (src.title.isBlank()) "Untitled" else src.title
+        return dao.upsert(
+            src.copy(id = 0L, title = "$base (Copy)", isDeleted = false, createdAt = now, updatedAt = now)
+        )
+    }
 }
