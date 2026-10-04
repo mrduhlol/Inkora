@@ -11,7 +11,7 @@
 > No account. No cloud. No tracking. Everything stays on your device.
 
 <p align="center">
-  <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk">
+  <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.3.apk">
     <img src="https://img.shields.io/badge/Download_Inkora_v1.3_APK-6750A4?style=for-the-badge&logo=android&logoColor=white" alt="Download Inkora v1.3 APK" />
   </a>
 </p>
@@ -127,7 +127,7 @@ app/src/main/java/com/abhishek/inkora/
 
 **Option A — download (easiest).**
 
-[Download Inkora v1.3 APK](https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk)
+[Download Inkora v1.3 APK](https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.3.apk)
 
 Then allow installs from unknown apps, open the file, and write your first page.
 
@@ -157,4 +157,4 @@ Issues and pull requests are welcome. Keep the notebook calm: no gradients for f
 
 ---
 
-<p align="center"><b>INKORA v1.3</b> — write quietly. · <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.3">Release notes</a> · <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk">Download APK</a></p>
+<p align="center"><b>INKORA v1.3</b> — write quietly. · <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.3">Release notes</a> · <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.3.apk">Download APK</a></p>
