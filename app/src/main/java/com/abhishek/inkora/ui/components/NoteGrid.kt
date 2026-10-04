@@ -32,8 +32,8 @@ fun NoteGrid(
     }
     val columns = if (gridOverride in 1..4) gridOverride else adaptive
     LazyVerticalGrid(
-        modifier.fillMaxSize(),
         columns = GridCells.Fixed(columns),
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp)
