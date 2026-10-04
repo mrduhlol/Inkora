@@ -57,11 +57,11 @@ jobs:
           name: inkora-debug-apk
           path: dist
 
-      - name: Rename to Inkora APK
-        run: mv dist/app-debug.apk dist/Inkora-debug.apk
+      - name: Rename to versioned Inkora APK
+        run: mv dist/app-debug.apk "dist/Inkora-${{ github.ref_name }}.apk"
 
       - name: Publish GitHub Release with APK
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/Inkora-debug.apk
+          files: dist/Inkora-*.apk
           generate_release_notes: true
