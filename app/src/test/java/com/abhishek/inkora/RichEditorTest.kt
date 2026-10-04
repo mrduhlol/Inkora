@@ -63,17 +63,22 @@ class RichEditorTest {
     @Test fun bulletEnter_continuesThenExits() {
         var d = docOf("Apple", TextRange(5, 5)).toggleBlock(BlockKind.BULLET)
         assertEquals("• Apple", d.rendered())
-        // Press Enter at end -> new bullet line.
-        d = d.onInput("• Apple\n• ", TextRange(9, 9))
+        // Enter at end of "• Apple" (cursor 7): field becomes "• Apple\n", cursor 8.
+        d = d.onInput("• Apple\n", TextRange(8, 8))
         assertEquals(2, d.lines.size)
         assertEquals(BlockKind.BULLET, d.lines[1].block)
-        // Type Banana, press Enter on empty bullet -> exit list.
-        d = d.onInput("• Apple\n• Banana\n• ", TextRange(18, 18))
+        assertEquals("• Apple\n• ", d.rendered())
+        // Caret sits after the generated prefix: typing lands in content.
+        assertEquals(10, d.selection.start)
+        // Type Banana (cursor 10 -> 16), then Enter -> third bullet.
+        d = d.onInput("• Apple\n• Banana", TextRange(16, 16))
+        assertEquals("Banana", d.lines[1].text)
         d = d.onInput("• Apple\n• Banana\n", TextRange(17, 17))
-        // After deleting trailing prefix the empty line exits on next Enter-like input;
-        // at minimum structure stays intact with no duplication.
-        assertTrue(d.rendered().contains("Apple"))
-        assertTrue(d.rendered().contains("Banana"))
+        assertEquals(BlockKind.BULLET, d.lines[2].block)
+        // Enter on the empty bullet exits the list.
+        d = d.onInput("• Apple\n• Banana\n• \n", TextRange(20, 20))
+        assertEquals(BlockKind.PARAGRAPH, d.lines[2].block)
+        assertEquals("Apple\nBanana\n\n", d.toRich().text)
     }
 
     @Test fun numbered_rendersSequentially() {
