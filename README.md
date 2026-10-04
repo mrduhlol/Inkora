@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk">
-    <img src="https://img.shields.io/badge/Download_Inkora_v1.1_APK-6750A4?style=for-the-badge&logo=android&logoColor=white" alt="Download Inkora v1.1 APK" />
+    <img src="https://img.shields.io/badge/Download_Inkora_v1.2_APK-6750A4?style=for-the-badge&logo=android&logoColor=white" alt="Download Inkora v1.2 APK" />
   </a>
 </p>
 
@@ -21,6 +21,20 @@
 </p>
 
 ---
+
+## New in v1.2
+
+v1.2 polishes the v1.1 foundation without changing its architecture:
+
+- **Accent cursor and live toolbar states** — the caret uses your accent color, and Bold, Italic, Underline, Strike, Bullet, Numbered and Checklist buttons light up exactly when the cursor or selection carries that formatting (mixed selections stay honest).
+- **Move to folder from the editor** — the `⋮` menu assigns notes to folders without duplicating them; deleting a folder keeps its notes.
+- **Visual page-style picker** — Blank, Ruled, Grid and Dotted now show true mini paper previews and apply instantly.
+- **Paper that adapts** — rulings, grids and dots re-tint for dark pages so they stay subtle and readable.
+- **Derived titles** — untitled notes show their first content line in previews and lists; your stored title is never overwritten.
+- **Instant creation** — new notes open with the title field focused.
+- **Safer Trash** — permanent delete asks first; restore keeps content, formatting, folder, favorite and page style.
+- **Clearer search** — no-match searches get their own empty state instead of a blank grid.
+- **Calmer Settings** — grouped sections with dividers and plain-language control descriptions.
 
 ## New in v1.1
 
@@ -51,19 +65,19 @@ v1.1 rebuilds the editor around real rich text and fixes the most-reported v1.0 
 
 **Fully offline.** Create, format, trash, restore, favorite, archive, search and file notes with airplane mode on. Notes survive app kill, force-stop and reboot via Room.
 
-## Inside v1.1
+## Inside v1.2
 
-- [x] Home grid, paper preview with folded corner, empty state
-- [x] Bottom-**left** `+` button for instant note creation
+- [x] Home grid, paper preview with folded corner, derived titles, empty states
+- [x] Bottom-**left** `+` button with instant editor focus
 - [x] Span-based rich editor with legacy Markdown migration
-- [x] Page styles and paper backgrounds, persisted per note
-- [x] Local search across title and content (debounced Room queries)
-- [x] Favorites with dedicated screen
-- [x] Archive and Trash (soft-delete, restore, permanent delete)
-- [x] Folders (create, rename, delete — deleting a folder keeps its notes)
+- [x] Undo/redo across formatting, lists and checkboxes
+- [x] Visual page-style picker, adaptive rulings, per-note paper
+- [x] Local search with no-results state
+- [x] Favorites, Archive, Trash with delete confirmation and full restore
+- [x] Folders with in-editor assignment
 - [x] Settings via DataStore (theme, accent, dynamic color, defaults, sort, grid)
 - [x] Accessibility: 48dp targets, content descriptions, scalable type, contrast
-- [x] Unit tests: rich text, editor behavior, persistence, theming
+- [x] Unit tests: rich text, editor behavior, persistence, folders, theming
 
 **Deliberately not in v1.1** (architected for, not shipped): handwriting, images, PDF, audio, AI, cloud sync and Inkora-web. v1.1 is the stable paper foundation.
 
@@ -101,7 +115,7 @@ app/src/main/java/com/abhishek/inkora/
 
 **Option A — download (easiest).**
 
-[Download Inkora v1.1 APK](https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk)
+[Download Inkora v1.2 APK](https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk)
 
 Then allow installs from unknown apps, open the file, and write your first page.
 
@@ -131,4 +145,4 @@ Issues and pull requests are welcome. Keep the notebook calm: no gradients for f
 
 ---
 
-<p align="center"><b>INKORA v1.1</b> — write quietly. · <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.1">Release notes</a> · <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk">Download APK</a></p>
+<p align="center"><b>INKORA v1.2</b> — write quietly. · <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.2">Release notes</a> · <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk">Download APK</a></p>
