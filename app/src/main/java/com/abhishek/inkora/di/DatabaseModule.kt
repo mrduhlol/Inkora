@@ -23,7 +23,7 @@ object DatabaseModule {
     @Provides @Singleton
     fun provideDatabase(@ApplicationContext ctx: Context): InkoraDatabase =
         Room.databaseBuilder(ctx, InkoraDatabase::class.java, InkoraDatabase.NAME)
-            .fallbackToDestructiveMigration(dropAllTables = false)
+            .fallbackToDestructiveMigration()
             .build()
 
     @Provides fun provideNoteDao(db: InkoraDatabase): NoteDao = db.noteDao()
