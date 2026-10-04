@@ -1,5 +1,6 @@
 package com.abhishek.inkora.features.trash
 
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -84,8 +85,10 @@ fun TrashScreen(onBack: () -> Unit, vm: TrashViewModel = hiltViewModel()) {
                         )
                     },
                     trailingContent = {
-                        TextButton(onClick = { vm.restore(n.id) }) { Text("Restore") }
-                        TextButton(onClick = { pendingDelete = n.id }) { Text("Delete") }
+                        Row {
+                            TextButton(onClick = { vm.restore(n.id) }) { Text("Restore") }
+                            TextButton(onClick = { pendingDelete = n.id }) { Text("Delete") }
+                        }
                     }
                 )
             }
