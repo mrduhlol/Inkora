@@ -10,7 +10,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
 import com.abhishek.inkora.features.archive.ArchiveScreen
 import com.abhishek.inkora.features.editor.EditorScreen
 import com.abhishek.inkora.features.favorites.FavoritesScreen
