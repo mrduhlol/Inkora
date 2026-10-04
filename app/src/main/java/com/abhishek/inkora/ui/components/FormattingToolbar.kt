@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
-import androidx.compose.material.icons.automirrored.filled.FormatListNumbered
+import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
@@ -80,7 +80,7 @@ fun FormattingToolbar(
                 Icon(Icons.AutoMirrored.Filled.FormatListBulleted, null)
             }
             ToolButton("Numbered list", onClick = onNumbered) {
-                Icon(Icons.AutoMirrored.Filled.FormatListNumbered, null)
+                Icon(Icons.Filled.FormatListNumbered, null)
             }
             ToolButton("Checklist", onClick = onChecklist) {
                 Icon(Icons.Filled.CheckBox, null)
