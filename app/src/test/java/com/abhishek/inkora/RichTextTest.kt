@@ -1,6 +1,7 @@
 package com.abhishek.inkora
 
 import com.abhishek.inkora.domain.model.BlockKind
+import com.abhishek.inkora.domain.model.RichBlock
 import com.abhishek.inkora.domain.model.RichContent
 import com.abhishek.inkora.domain.model.RichText
 import com.abhishek.inkora.domain.model.SpanKind
@@ -144,5 +145,24 @@ class RichTextTest {
         val t = RichText.displayTitle("", "**Bold** intro", "md-v1")
         assertEquals("Bold intro", t)
         assertEquals("", RichText.displayTitle("", "   \n  ", "md-v1"))
+    }
+
+    @Test fun structureBlocks_toggleAndPlain() {
+        var c = RichContent("Title\nBody")
+        c = RichText.setBlock(c, 0..0, BlockKind.HEADING1)
+        c = RichText.setBlock(c, 1..1, BlockKind.QUOTE)
+        assertEquals(BlockKind.HEADING1, RichText.blockAt(c, 0).kind)
+        val p = RichText.plain(c)
+        assertTrue(p.contains("Title") && p.contains("Body"))
+        assertTrue(!p.contains("#"))
+        // Toggle off reverts to paragraph.
+        c = RichText.setBlock(c, 0..0, BlockKind.HEADING1)
+        assertEquals(BlockKind.PARAGRAPH, RichText.blockAt(c, 0).kind)
+    }
+
+    @Test fun divider_plainHasNoDashesSyntax() {
+        val c = RichContent("", emptyList(), listOf(RichBlock(0, BlockKind.DIVIDER)))
+        val p = RichText.plain(c)
+        assertTrue(!p.contains("---"))
     }
 }
