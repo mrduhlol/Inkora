@@ -204,18 +204,38 @@ data class RichDoc(
         val srcText = newLines[srcIdx]
         val strippedSrc = stripExpected(srcText, src)
         return if (strippedSrc.isBlank()) {
-            // Empty item -> exit list: source line becomes paragraph.
+            // Empty item -> exit list: source line becomes paragraph, caret to its start.
             // Re-parse remaining lines generically, then fix the affected line.
             val base = onInputGeneric(newRendered, newSel)
             val fixed = base.lines.toMutableList()
             if (srcIdx < fixed.size) fixed[srcIdx] = fixed[srcIdx].copy(block = BlockKind.PARAGRAPH, checked = false)
-            base.copy(lines = fixed, selection = newSel)
+            val withFixed = base.copy(lines = fixed)
+            withFixed.copy(selection = TextRange(withFixed.renderedLineStart(withFixed.rendered(), srcIdx)))
         } else {
             val base = onInputGeneric(newRendered, newSel)
             val fixed = base.lines.toMutableList()
             if (newIdx < fixed.size) {
                 fixed[newIdx] = fixed[newIdx].copy(block = src.block, checked = false, spans = emptyList())
             }
+            // Caret goes after the generated prefix so typing lands in content.
+            val withFixed = base.copy(lines = fixed)
+            val r = withFixed.rendered()
+            val ls = withFixed.renderedLineStart(r, newIdx)
+            withFixed.copy(selection = TextRange(ls + withFixed.prefixLenAt(newIdx)))
+        }
+    }
+
+    /** Length of the generated prefix on [line] in the current render. */
+    fun prefixLenAt(line: Int): Int {
+        var n = 0
+        lines.forEachIndexed { i, l ->
+            if (l.block == BlockKind.NUMBERED) n += 1
+            if (i == line) return prefixFor(l, n).length
+        }
+        return 0
+    }
+
+    fun renderedLineStart(r: String, line: Int): Int {
             base.copy(lines = fixed, selection = newSel)
         }
     }
@@ -362,18 +382,6 @@ data class RichDoc(
             return offset
         }
         return TextRange(map(selection.min), map(selection.max))
-    }
-
-    private fun renderedLineStart(r: String, line: Int): Int {
-        var pos = 0
-        var cur = 0
-        while (cur < line) {
-            val nl = r.indexOf('\n', pos)
-            if (nl < 0) return r.length
-            pos = nl + 1
-            cur++
-        }
-        return pos
     }
 
     private fun renderedLineOf(r: String, offset: Int): Int {
