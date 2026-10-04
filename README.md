@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk">
-    <img src="https://img.shields.io/badge/Download_Inkora_v1.2_APK-6750A4?style=for-the-badge&logo=android&logoColor=white" alt="Download Inkora v1.2 APK" />
+    <img src="https://img.shields.io/badge/Download_Inkora_v1.3_APK-6750A4?style=for-the-badge&logo=android&logoColor=white" alt="Download Inkora v1.3 APK" />
   </a>
 </p>
 
@@ -21,6 +21,19 @@
 </p>
 
 ---
+
+## New in v1.3
+
+v1.3 turns the polished notebook into a capable everyday notebook — still offline, still lightweight:
+
+- **Pinning and sections** — pin notes to a Pinned section above All Notes, with a subtle pin badge and per-section sorting that persists.
+- **Sorting and views** — Recently updated, Recently created, Title A–Z and Title Z–A in a compact Sort control, plus Grid and List views (list rows keep the folded-paper swatch, excerpt and relative timestamps). Both persist across restarts.
+- **Multi-select** — long-press to select, with a "N selected" bar for pin, favorite, folder-move and trash batch actions; Back exits selection.
+- **Richer editor** — headings (H1–H3 cycle), quote blocks with an accent bar, real horizontal dividers, per-paragraph alignment (left, center, right, justify) and indentation, all as actual formatting with toolbar states.
+- **Images, kept local** — system photo picker (no storage permission), app-private files with Room metadata, downsampled thumbnails, tap-to-view, guarded removal, survival across trash and restart.
+- **Duplicate, share, info** — one-tap independent copies titled "Original (Copy)", native Android share sheet with clean text, and a Note Info dialog (dates, counts, folder, flags).
+- **Backup your way** — Storage and Data settings with on-demand usage stats, one-file JSON export (notes, folders, formatting, downsampled images) via the system file picker, guarded import that always creates new notes, and confirmed Empty Trash.
+- **Safer by default** — additive Room migration (existing notes untouched), save-failure surfacing with retry, search across titles, bodies and folder names.
 
 ## New in v1.2
 
@@ -65,19 +78,18 @@ v1.1 rebuilds the editor around real rich text and fixes the most-reported v1.0 
 
 **Fully offline.** Create, format, trash, restore, favorite, archive, search and file notes with airplane mode on. Notes survive app kill, force-stop and reboot via Room.
 
-## Inside v1.2
+## Inside v1.3
 
-- [x] Home grid, paper preview with folded corner, derived titles, empty states
-- [x] Bottom-**left** `+` button with instant editor focus
-- [x] Span-based rich editor with legacy Markdown migration
-- [x] Undo/redo across formatting, lists and checkboxes
-- [x] Visual page-style picker, adaptive rulings, per-note paper
-- [x] Local search with no-results state
-- [x] Favorites, Archive, Trash with delete confirmation and full restore
-- [x] Folders with in-editor assignment
-- [x] Settings via DataStore (theme, accent, dynamic color, defaults, sort, grid)
+- [x] Home sections (Pinned, All Notes), four sort orders, grid and list views
+- [x] Multi-select with pin, favorite, folder-move and trash batch actions
+- [x] Span-based rich editor: headings, quotes, dividers, alignment, indent
+- [x] Local images with metadata store, viewer and guarded removal
+- [x] Duplicate, native share, Note Info with live counts
+- [x] JSON backup export and guarded import via Storage Access Framework
+- [x] Storage usage stats and confirmed Empty Trash
+- [x] Additive Room v1 to v2 migration; legacy notes preserved
 - [x] Accessibility: 48dp targets, content descriptions, scalable type, contrast
-- [x] Unit tests: rich text, editor behavior, persistence, folders, theming
+- [x] Unit tests: rich text, editor behavior, export, persistence, folders, theming
 
 **Deliberately not in v1.1** (architected for, not shipped): handwriting, images, PDF, audio, AI, cloud sync and Inkora-web. v1.1 is the stable paper foundation.
 
@@ -115,7 +127,7 @@ app/src/main/java/com/abhishek/inkora/
 
 **Option A — download (easiest).**
 
-[Download Inkora v1.2 APK](https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk)
+[Download Inkora v1.3 APK](https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk)
 
 Then allow installs from unknown apps, open the file, and write your first page.
 
@@ -145,4 +157,4 @@ Issues and pull requests are welcome. Keep the notebook calm: no gradients for f
 
 ---
 
-<p align="center"><b>INKORA v1.2</b> — write quietly. · <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.2">Release notes</a> · <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk">Download APK</a></p>
+<p align="center"><b>INKORA v1.3</b> — write quietly. · <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.3">Release notes</a> · <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk">Download APK</a></p>
