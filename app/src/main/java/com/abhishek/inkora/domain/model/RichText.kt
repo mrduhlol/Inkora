@@ -153,6 +153,18 @@ object RichText {
 
     // ---------- plain / preview text (no syntax, ever) ----------
 
+    /**
+     * Display title: the user's title, or the first meaningful content line when
+     * the title is blank. Never overwrites the stored title — presentation only.
+     */
+    fun displayTitle(title: String, rawContent: String, format: String): String {
+        if (title.isNotBlank()) return title
+        val clean = if (format == FORMAT) {
+            decodeOrNull(rawContent)?.text ?: stripSyntax(rawContent)
+        } else stripSyntax(rawContent)
+        return clean.lines().firstOrNull { it.isNotBlank() }?.trim()?.take(80) ?: ""
+    }
+
     /** Clean human-readable text with real glyphs (•, 1., ☐/☑) — no markers. */
     fun plain(c: RichContent): String {
         val lines = linesOf(c.text)
