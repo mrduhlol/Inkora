@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Inkora" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/inkora_window_bg</item>
+        <item name="android:statusBarColor">@color/inkora_window_bg</item>
+        <item name="android:navigationBarColor">@color/inkora_window_bg</item>
+    </style>
+</resources>
