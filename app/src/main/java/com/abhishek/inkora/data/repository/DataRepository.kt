@@ -50,7 +50,7 @@ class DataRepository @Inject constructor(
     private val attachments: AttachmentRepository
 ) {
     suspend fun exportAll(): ByteArray = withContext(Dispatchers.IO) {
-        val notes = noteDao.observeActiveNotes().first() + noteDao.observeArchived().first()
+        val notes = noteDao.observeActive().first() + noteDao.observeArchived().first()
         val folders = folderDao.observe().first()
         val outNotes = notes.map { n ->
             ExportNote(
@@ -158,7 +158,7 @@ class DataRepository @Inject constructor(
     suspend fun storageStats(): StorageStats = withContext(Dispatchers.IO) {
         val dbFile = context.getDatabasePath(InkoraDatabase.NAME)
         val dbBytes = runCatching { if (dbFile.exists()) dbFile.length() else 0L }.getOrDefault(0L)
-        val active = runCatching { noteDao.observeActiveNotes().first().size }.getOrDefault(0)
+        val active = runCatching { noteDao.observeActive().first().size }.getOrDefault(0)
         val trash = runCatching { noteDao.observeTrash().first().size }.getOrDefault(0)
         StorageStats(dbBytes, attachments.imagesBytes(), active, trash)
     }
