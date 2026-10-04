@@ -1,5 +1,6 @@
 package com.abhishek.inkora
 
+import androidx.compose.ui.graphics.Color
 import com.abhishek.inkora.domain.model.AccentColor
 import com.abhishek.inkora.ui.theme.accentSeed
 import com.abhishek.inkora.ui.theme.inkoraDarkScheme
@@ -24,7 +25,8 @@ class ThemeTest {
         val seed = accentSeed(AccentColor.TEAL)
         val amoled = inkoraDarkScheme(seed, amoled = true)
         val dark = inkoraDarkScheme(seed, amoled = false)
-        assertEquals(0xFF000000.toInt(), amoled.background.value.toInt())
+        assertEquals(Color.Black, amoled.background)
+        assertEquals(Color(0xFF141318), dark.background)
         assertNotEquals(amoled.background, dark.background)
     }
 
