@@ -107,6 +107,54 @@ class RichEditorTest {
         assertTrue(!r.contains("**") && !r.contains("[ ]") && !r.contains("_it_"))
     }
 
+    @Test fun heading_cycle_body_h1_h2_h3_body() {
+        var d = docOf("Title", TextRange(0, 5))
+        d = d.cycleHeading()
+        assertEquals(BlockKind.HEADING1, d.lines[0].block)
+        d = d.cycleHeading()
+        assertEquals(BlockKind.HEADING2, d.lines[0].block)
+        d = d.cycleHeading()
+        assertEquals(BlockKind.HEADING3, d.lines[0].block)
+        d = d.cycleHeading()
+        assertEquals(BlockKind.PARAGRAPH, d.lines[0].block)
+        assertEquals("Title", d.toRich().text) // no # markers
+    }
+
+    @Test fun quote_toggle_and_render() {
+        var d = docOf("Important", TextRange(0, 9)).toggleQuote()
+        assertEquals(BlockKind.QUOTE, d.lines[0].block)
+        assertTrue(d.render(Color.Black).text.contains("Important"))
+        d = d.toggleQuote()
+        assertEquals(BlockKind.PARAGRAPH, d.lines[0].block)
+    }
+
+    @Test fun divider_insert_and_atomic_edit() {
+        var d = docOf("Above", TextRange(5, 5)).insertDivider()
+        assertEquals(2, d.lines.size)
+        assertEquals(BlockKind.DIVIDER, d.lines[1].block)
+        assertTrue(!d.rendered().contains("---"))
+        // Typing over a divider converts it to a paragraph.
+        d = d.onInput(d.rendered() + "x", TextRange(d.rendered().length + 1, d.rendered().length + 1))
+        assertEquals(BlockKind.PARAGRAPH, d.lines[1].block)
+    }
+
+    @Test fun align_cycle_and_indent_bounds() {
+        var d = docOf("Text", TextRange(0, 4)).cycleAlign()
+        assertEquals(com.abhishek.inkora.domain.model.ParaAlign.CENTER, d.lines[0].align)
+        d = d.indentMore().indentMore()
+        assertEquals(2, d.lines[0].indent)
+        d = d.indentLess().indentLess().indentLess()
+        assertEquals(0, d.lines[0].indent)
+    }
+
+    @Test fun enter_onHeading_breaksToParagraph() {
+        var d = docOf("Head\nBody", TextRange(4, 4)).toggleBlock(BlockKind.HEADING1)
+        // Enter at end of heading line: new line is a paragraph.
+        d = d.onInput("Head\n\nBody", TextRange(5, 5))
+        assertEquals(BlockKind.PARAGRAPH, d.lines[1].block)
+        assertEquals(BlockKind.PARAGRAPH, d.lines[2].block)
+    }
+
     @Test fun activeBlocks_uniformSelection() {
         val d = docOf("A\nB", TextRange(0, 3)).toggleBlock(BlockKind.BULLET)
         assertTrue(d.copy(selection = TextRange(0, 3)).activeBlocks().contains(BlockKind.BULLET))
