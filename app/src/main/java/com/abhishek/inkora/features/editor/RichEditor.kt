@@ -236,8 +236,15 @@ data class RichDoc(
     }
 
     fun renderedLineStart(r: String, line: Int): Int {
-            base.copy(lines = fixed, selection = newSel)
+        var pos = 0
+        var cur = 0
+        while (cur < line) {
+            val nl = r.indexOf('\n', pos)
+            if (nl < 0) return r.length
+            pos = nl + 1
+            cur++
         }
+        return pos
     }
 
     private fun lineIndexAtRenderedText(t: String, offset: Int): Int {
