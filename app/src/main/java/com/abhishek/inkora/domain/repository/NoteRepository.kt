@@ -11,7 +11,7 @@ interface NoteRepository {
     fun observeNotesInFolder(folderId: Long?): Flow<List<Note>>
     fun searchNotes(query: String): Flow<List<Note>>
     suspend fun getById(id: Long): Note?
-    suspend fun createBlank(): Note
+    suspend fun createBlank(): Long
     suspend fun upsert(note: Note): Long
     suspend fun moveToTrash(id: Long)
     suspend fun restore(id: Long)
