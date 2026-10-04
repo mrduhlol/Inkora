@@ -25,18 +25,33 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.abhishek.inkora.data.repository.AttachmentRepository
+import com.abhishek.inkora.data.repository.DataRepository
 import com.abhishek.inkora.domain.repository.NoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @HiltViewModel
-class TrashViewModel @Inject constructor(private val notes: NoteRepository) : ViewModel() {
+class TrashViewModel @Inject constructor(
+    private val notes: NoteRepository,
+    private val attachments: AttachmentRepository,
+    private val data: DataRepository
+) : ViewModel() {
     val trash = notes.observeTrash().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    private val _cleared = MutableStateFlow<Int?>(null)
+    val cleared: StateFlow<Int?> = _cleared
     fun restore(id: Long) = viewModelScope.launch { notes.restore(id) }
-    fun deleteForever(id: Long) = viewModelScope.launch { notes.deleteForever(id) }
+    fun deleteForever(id: Long) = viewModelScope.launch {
+        attachments.removeForNote(id)
+        notes.deleteForever(id)
+    }
+    fun emptyTrash() = viewModelScope.launch { _cleared.value = data.clearTrash() }
+    fun consumeCleared() { _cleared.value = null }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,11 +59,17 @@ class TrashViewModel @Inject constructor(private val notes: NoteRepository) : Vi
 fun TrashScreen(onBack: () -> Unit, vm: TrashViewModel = hiltViewModel()) {
     val items by vm.trash.collectAsStateWithLifecycle()
     var pendingDelete: Long? by remember { mutableStateOf(null) }
+    var confirmEmpty by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
-                title = { Text("Trash") }
+                title = { Text("Trash") },
+                actions = {
+                    if (items.isNotEmpty()) {
+                        TextButton(onClick = { confirmEmpty = true }) { Text("Empty trash") }
+                    }
+                }
             )
         }
     ) { pad ->
@@ -56,7 +77,12 @@ fun TrashScreen(onBack: () -> Unit, vm: TrashViewModel = hiltViewModel()) {
             items(items, key = { it.id }) { n ->
                 ListItem(
                     headlineContent = { Text(n.title.ifBlank { "Untitled" }) },
-                    supportingContent = { Text(n.content.take(80)) },
+                    supportingContent = {
+                        Text(
+                            com.abhishek.inkora.domain.model.RichText
+                                .previewText(n.content, n.contentFormat).take(80)
+                        )
+                    },
                     trailingContent = {
                         TextButton(onClick = { vm.restore(n.id) }) { Text("Restore") }
                         TextButton(onClick = { pendingDelete = n.id }) { Text("Delete") }
@@ -79,6 +105,19 @@ fun TrashScreen(onBack: () -> Unit, vm: TrashViewModel = hiltViewModel()) {
                 dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Keep") } },
                 title = { Text("Delete forever?") },
                 text = { Text("This cannot be undone. Restore keeps everything instead.") }
+            )
+        }
+        if (confirmEmpty) {
+            AlertDialog(
+                onDismissRequest = { confirmEmpty = false },
+                confirmButton = {
+                    TextButton(onClick = { vm.emptyTrash(); confirmEmpty = false }) {
+                        Text("Empty trash")
+                    }
+                },
+                dismissButton = { TextButton(onClick = { confirmEmpty = false }) { Text("Keep") } },
+                title = { Text("Empty trash?") },
+                text = { Text("All trashed notes and their images will be permanently deleted.") }
             )
         }
     }
