@@ -14,19 +14,23 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhishek.inkora.domain.model.Note
+import com.abhishek.inkora.domain.model.RichText
+import com.abhishek.inkora.ui.theme.mutedOnPaperColor
+import com.abhishek.inkora.ui.theme.onPaperColor
+import com.abhishek.inkora.ui.theme.paperColorFor
 
 /**
- * Small sheet-of-paper preview with folded corner, real title + content.
- * Never shows placeholder text: falls back to content-derived excerpt.
+ * Small sheet-of-paper preview with folded corner, real title + clean content.
+ * Formatted notes render as readable text — raw markers are never shown.
  */
 @Composable
 fun InkoraPaperPreview(
@@ -41,12 +45,20 @@ fun InkoraPaperPreview(
             .clickable(onClick = { onOpen(note.id) })
             .semantics { contentDescription = "Open note ${note.title.ifBlank { "untitled" }}" }
     ) {
+        val bgKey = note.backgroundStyle.ifBlank { "cream" }.let {
+            // backgroundStyle doubles as paper color key in V1 for simplicity
+            when (it) { "white", "gray", "dark", "custom" -> it; else -> "cream" }
+        }
+        val paper = paperColorFor(bgKey, note.backgroundColor)
+        val ink = onPaperColor(paper)
+        val muted = mutedOnPaperColor(paper)
+        // Clean excerpt: rich payloads render with glyphs, legacy markers stripped.
+        val excerpt = remember(note.content, note.contentFormat) {
+            RichText.previewText(note.content, note.contentFormat).ifBlank { "No text yet" }
+        }
         InkoraPaperSurface(
             modifier = Modifier.fillMaxWidth().height(190.dp),
-            background = note.backgroundStyle.ifBlank { "cream" }.let {
-                // backgroundStyle doubles as paper color key in V1 for simplicity
-                when (it) { "white", "gray", "dark", "custom" -> it; else -> "cream" }
-            },
+            background = bgKey,
             customHex = note.backgroundColor,
             pageStyle = note.pageStyle
         ) {
@@ -54,14 +66,15 @@ fun InkoraPaperPreview(
                 Text(
                     text = note.title.ifBlank { "Untitled" },
                     style = MaterialTheme.typography.titleMedium,
+                    color = ink,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = note.content.ifBlank { "No text yet" },
+                    text = excerpt,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF5F5B58),
+                    color = muted,
                     maxLines = 5,
                     overflow = TextOverflow.Ellipsis
                 )
