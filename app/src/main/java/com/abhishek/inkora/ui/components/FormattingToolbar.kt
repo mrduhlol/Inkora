@@ -27,16 +27,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.abhishek.inkora.domain.model.BlockKind
 import com.abhishek.inkora.domain.model.SpanKind
 
 /**
  * Real formatting toolbar: toggles selection-scoped spans, list blocks and
- * checklist items. Active kinds are highlighted with the app accent.
+ * checklist items. Span actives highlight the cursor/selection state; block
+ * buttons highlight only when the whole selection shares that block.
  * Undo/redo restore previous editor states. 48dp touch targets.
  */
 @Composable
 fun FormattingToolbar(
     active: Set<SpanKind>,
+    blocks: Set<BlockKind> = emptySet(),
     canUndo: Boolean,
     canRedo: Boolean,
     onUndo: () -> Unit,
@@ -76,13 +79,13 @@ fun FormattingToolbar(
             ToolButton("Strikethrough", active = active.contains(SpanKind.STRIKE), onClick = onStrike) {
                 Icon(Icons.Filled.FormatStrikethrough, null)
             }
-            ToolButton("Bullet list", onClick = onBullet) {
+            ToolButton("Bullet list", active = blocks.contains(BlockKind.BULLET), onClick = onBullet) {
                 Icon(Icons.AutoMirrored.Filled.FormatListBulleted, null)
             }
-            ToolButton("Numbered list", onClick = onNumbered) {
+            ToolButton("Numbered list", active = blocks.contains(BlockKind.NUMBERED), onClick = onNumbered) {
                 Icon(Icons.Filled.FormatListNumbered, null)
             }
-            ToolButton("Checklist", onClick = onChecklist) {
+            ToolButton("Checklist", active = blocks.contains(BlockKind.CHECK), onClick = onChecklist) {
                 Icon(Icons.Filled.CheckBox, null)
             }
         }
