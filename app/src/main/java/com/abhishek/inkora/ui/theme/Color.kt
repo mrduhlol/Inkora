@@ -1,6 +1,7 @@
 package com.abhishek.inkora.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 // Centralized design tokens. No hard-coded colors outside this file + Theme.kt.
 
@@ -27,3 +28,11 @@ fun paperColorFor(background: String, customHex: String?): Color {
         else -> PaperCream
     }
 }
+
+/** Readable ink color for a given paper: dark text on light paper, light text on dark. */
+fun onPaperColor(paper: Color): Color =
+    if (paper.luminance() > 0.5f) PaperInk else Color(0xFFF2EEE4)
+
+/** Muted/placeholder tone with the same contrast rule. */
+fun mutedOnPaperColor(paper: Color): Color =
+    if (paper.luminance() > 0.5f) PaperMuted else Color(0xFFB9B2A6)
