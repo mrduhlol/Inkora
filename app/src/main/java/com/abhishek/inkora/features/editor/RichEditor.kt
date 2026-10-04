@@ -423,6 +423,17 @@ data class RichDoc(
         val atCursor = line.spans.filter { it.start <= rel && rel <= it.end }.map { it.kind }.toSet()
         return atCursor + pending
     }
+
+    /**
+     * Block kinds uniformly covering the selection — for toolbar active states.
+     * Mixed selections yield an empty set (never claim formatting falsely).
+     */
+    fun activeBlocks(): Set<BlockKind> {
+        val r = rendered()
+        val range = RichText.linesInSelection(r, selection.min, selection.max)
+        val kinds = range.map { lines.getOrNull(it)?.block ?: BlockKind.PARAGRAPH }.toSet()
+        return if (kinds.size == 1 && kinds.single() != BlockKind.PARAGRAPH) kinds else emptySet()
+    }
 }
 
 fun styleFor(kind: SpanKind): SpanStyle = when (kind) {
