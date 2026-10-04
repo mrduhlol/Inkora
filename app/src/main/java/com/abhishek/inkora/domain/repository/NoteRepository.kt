@@ -17,6 +17,9 @@ interface NoteRepository {
     suspend fun restore(id: Long)
     suspend fun deleteForever(id: Long)
     suspend fun setFavorite(id: Long, favorite: Boolean)
+    suspend fun setPinned(id: Long, pinned: Boolean)
     suspend fun setArchived(id: Long, archived: Boolean)
     suspend fun moveToFolder(id: Long, folderId: Long?)
+    /** Independent copy with "(Copy)" title. Never shares the row; never trashed. */
+    suspend fun duplicate(id: Long): Long?
 }
