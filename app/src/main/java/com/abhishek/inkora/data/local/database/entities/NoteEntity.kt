@@ -19,6 +19,7 @@ data class NoteEntity(
     val isFavorite: Boolean = false,
     val isArchived: Boolean = false,
     val isDeleted: Boolean = false,
+    val isPinned: Boolean = false,
     val folderId: Long? = null,
     val backgroundStyle: String = "blank",
     val backgroundColor: String? = null,
