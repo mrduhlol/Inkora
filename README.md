@@ -88,7 +88,7 @@ app/src/main/java/com/abhishek/inkora/
 
 **Option A — download (easiest).** Tap the button at the top, or:
 
-👉 **[Download Inkora v1.0 APK](https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.0-debug.apk)**
+👉 **[Download Inkora APK](https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk)**
 
 Then: `Allow install from unknown apps` → open the file → write your first page.
 
@@ -118,4 +118,4 @@ Issues and PRs welcome. Keep the notebook calm: no gradients-for-fun, no dashboa
 
 ---
 
-<p align="center"><b>INKORA v1.0</b> — write quietly. · <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.0">Release notes</a> · <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.0-debug.apk">Download APK</a></p>
+<p align="center"><b>INKORA v1.0</b> — write quietly. · <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.0">Release notes</a> · <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-debug.apk">Download APK</a></p>
