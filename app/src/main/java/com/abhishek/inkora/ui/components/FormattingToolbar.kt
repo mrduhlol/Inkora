@@ -11,11 +11,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.FormatAlignCenter
+import androidx.compose.material.icons.filled.FormatAlignJustify
+import androidx.compose.material.icons.filled.FormatAlignLeft
+import androidx.compose.material.icons.filled.FormatAlignRight
 import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatIndentDecrease
+import androidx.compose.material.icons.filled.FormatIndentIncrease
 import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.FormatStrikethrough
 import androidx.compose.material.icons.filled.FormatUnderlined
+import androidx.compose.material.icons.filled.HorizontalRule
 import androidx.compose.material.icons.filled.Redo
+import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,6 +37,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.abhishek.inkora.domain.model.BlockKind
+import com.abhishek.inkora.domain.model.ParaAlign
 import com.abhishek.inkora.domain.model.SpanKind
 
 /**
@@ -40,6 +50,7 @@ import com.abhishek.inkora.domain.model.SpanKind
 fun FormattingToolbar(
     active: Set<SpanKind>,
     blocks: Set<BlockKind> = emptySet(),
+    align: ParaAlign = ParaAlign.LEFT,
     canUndo: Boolean,
     canRedo: Boolean,
     onUndo: () -> Unit,
@@ -51,6 +62,12 @@ fun FormattingToolbar(
     onBullet: () -> Unit,
     onNumbered: () -> Unit,
     onChecklist: () -> Unit,
+    onHeading: () -> Unit = {},
+    onQuote: () -> Unit = {},
+    onDivider: () -> Unit = {},
+    onAlign: () -> Unit = {},
+    onIndentMore: () -> Unit = {},
+    onIndentLess: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Surface(modifier.fillMaxWidth(), tonalElevation = 2.dp) {
@@ -87,6 +104,33 @@ fun FormattingToolbar(
             }
             ToolButton("Checklist", active = blocks.contains(BlockKind.CHECK), onClick = onChecklist) {
                 Icon(Icons.Filled.CheckBox, null)
+            }
+            val headingActive = blocks.any {
+                it == BlockKind.HEADING1 || it == BlockKind.HEADING2 || it == BlockKind.HEADING3
+            }
+            ToolButton("Heading", active = headingActive, onClick = onHeading) {
+                Icon(Icons.Filled.Title, null)
+            }
+            ToolButton("Quote", active = blocks.contains(BlockKind.QUOTE), onClick = onQuote) {
+                Icon(Icons.Filled.FormatQuote, null)
+            }
+            ToolButton("Divider", onClick = onDivider) {
+                Icon(Icons.Filled.HorizontalRule, null)
+            }
+            val alignIcon = when (align) {
+                ParaAlign.CENTER -> Icons.Filled.FormatAlignCenter
+                ParaAlign.RIGHT -> Icons.Filled.FormatAlignRight
+                ParaAlign.JUSTIFY -> Icons.Filled.FormatAlignJustify
+                ParaAlign.LEFT -> Icons.Filled.FormatAlignLeft
+            }
+            ToolButton("Text alignment: ${align.name.lowercase()}", onClick = onAlign) {
+                Icon(alignIcon, null)
+            }
+            ToolButton("Decrease indent", onClick = onIndentLess) {
+                Icon(Icons.Filled.FormatIndentDecrease, null)
+            }
+            ToolButton("Increase indent", onClick = onIndentMore) {
+                Icon(Icons.Filled.FormatIndentIncrease, null)
             }
         }
     }
