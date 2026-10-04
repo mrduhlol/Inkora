@@ -8,12 +8,12 @@ import androidx.compose.ui.unit.sp
 
 // Clean, readable type scale. Scalable via system font settings automatically.
 val InkoraTypography = Typography(
-    displaySmall = TextStyle(FontFamily.Default, FontWeight.SemiBold, 28.sp, 34.sp, letterSpacing = (-0.25).sp),
-    headlineSmall = TextStyle(FontFamily.Default, FontWeight.SemiBold, 22.sp, 28.sp),
-    titleLarge = TextStyle(FontFamily.Default, FontWeight.SemiBold, 20.sp, 26.sp),
-    titleMedium = TextStyle(FontFamily.Default, FontWeight.Medium, 16.sp, 22.sp),
-    bodyLarge = TextStyle(FontFamily.Default, FontWeight.Normal, 16.sp, 24.sp),
-    bodyMedium = TextStyle(FontFamily.Default, FontWeight.Normal, 14.sp, 20.sp),
-    labelLarge = TextStyle(FontFamily.Default, FontWeight.Medium, 14.sp, 20.sp),
-    labelSmall = TextStyle(FontFamily.Default, FontWeight.Medium, 11.sp, 16.sp)
+    displaySmall = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = 28.sp, lineHeight = 34.sp, letterSpacing = (-0.25).sp),
+    headlineSmall = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 28.sp),
+    titleLarge = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 26.sp),
+    titleMedium = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = 16.sp, lineHeight = 22.sp),
+    bodyLarge = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp),
+    bodyMedium = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
+    labelLarge = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp),
+    labelSmall = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = 11.sp, lineHeight = 16.sp)
 )
