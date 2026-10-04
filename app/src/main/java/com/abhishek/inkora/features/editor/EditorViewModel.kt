@@ -28,6 +28,7 @@ data class EditorUiState(
     val notFound: Boolean = false,
     val canUndo: Boolean = false,
     val canRedo: Boolean = false,
+    val textSizeSp: Int = 16,
     val savedTick: Long = 0L
 )
 
@@ -71,7 +72,8 @@ class EditorViewModel @Inject constructor(
                 _state.value = EditorUiState(
                     note = note,
                     title = note.title,
-                    doc = RichDoc.fromRich(migrated)
+                    doc = RichDoc.fromRich(migrated),
+                    textSizeSp = prefs.defaultTextSizeSp
                 )
             }
         }
