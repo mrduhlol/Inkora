@@ -22,9 +22,7 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
+      # Runner images already ship the Android SDK; just expose it, no extra action.
       - name: Install Gradle 8.7 (no wrapper jar needed)
         run: |
           curl -sL https://services.gradle.org/distributions/gradle-8.7-bin.zip -o /tmp/gradle.zip
