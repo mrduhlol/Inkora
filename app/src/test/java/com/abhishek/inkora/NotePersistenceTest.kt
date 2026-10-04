@@ -68,4 +68,33 @@ class NotePersistenceTest {
         assertNotNull(kept)
         assertEquals(null, kept!!.folderId)
     }
+
+    @Test fun pin_and_duplicate() = runTest {
+        val repo = com.abhishek.inkora.data.repository.NoteRepositoryImpl(db.noteDao())
+        val id = db.noteDao().upsert(NoteEntity(title = "Original", content = "{}", isFavorite = true))
+        db.noteDao().setPinned(id, true)
+        assertEquals(true, db.noteDao().getById(id)!!.isPinned)
+        val copyId = repo.duplicate(id)
+        assertNotNull(copyId)
+        val copy = db.noteDao().getById(copyId!!)!!
+        assertEquals("Original (Copy)", copy.title)
+        assertEquals("{}", copy.content)
+        assertTrue(copy.isFavorite)
+        assertEquals(false, copy.isDeleted)
+        assertTrue(copy.id != id)
+    }
+
+    @Test fun search_matches_folder_name() = runTest {
+        val folderId = db.folderDao().upsert(FolderEntity(name = "Recipes"))
+        val id = db.noteDao().upsert(NoteEntity(title = "Dinner", content = "pasta"))
+        db.noteDao().moveToFolder(id, folderId)
+        assertTrue(db.noteDao().search("recip").first().any { it.id == id })
+    }
+
+    @Test fun migration_columns_exist_with_defaults() = runTest {
+        // v2 schema: legacy-style insert still works, pin defaults to false.
+        val id = db.noteDao().upsert(NoteEntity(title = "Legacy", content = "old"))
+        assertEquals(false, db.noteDao().getById(id)!!.isPinned)
+        assertTrue(db.attachmentDao().listForNote(id).isEmpty())
+    }
 }
