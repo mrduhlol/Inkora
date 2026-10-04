@@ -41,7 +41,8 @@ class MainActivity : ComponentActivity() {
                             onOpenSettings = { nav.navigate(InkoraRoute.Settings) },
                             onOpenTrash = { nav.navigate(InkoraRoute.Trash) },
                             onOpenFavorites = { nav.navigate(InkoraRoute.Favorites) },
-                            onOpenFolders = { nav.navigate(InkoraRoute.Folders) }
+                            onOpenFolders = { nav.navigate(InkoraRoute.Folders) },
+                            onOpenArchive = { nav.navigate(InkoraRoute.Archive) }
                         )
                     }
                     composable<InkoraRoute.Editor> {
