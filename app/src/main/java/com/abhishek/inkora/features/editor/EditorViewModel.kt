@@ -36,6 +36,7 @@ data class EditorUiState(
     val canRedo: Boolean = false,
     val textSizeSp: Int = 16,
     val savedTick: Long = 0L,
+    val isSaving: Boolean = false,
     val saveError: String? = null
 )
 
@@ -267,6 +268,7 @@ class EditorViewModel @Inject constructor(
     // ---------- autosave (debounced, lossless, includes formatting) ----------
 
     private fun scheduleSave() {
+        _state.value = _state.value.copy(isSaving = true)
         saveJob?.cancel()
         saveJob = viewModelScope.launch {
             delay(400L)
@@ -286,9 +288,9 @@ class EditorViewModel @Inject constructor(
         // error instead of silently discarding; the next edit retries.
         val ok = runCatching { notes.upsert(updated) }.isSuccess
         _state.value = if (ok) {
-            s.copy(note = updated, savedTick = System.currentTimeMillis(), saveError = null)
+            s.copy(note = updated, savedTick = System.currentTimeMillis(), isSaving = false, saveError = null)
         } else {
-            s.copy(saveError = "Could not save — will retry on your next edit")
+            s.copy(isSaving = false, saveError = "Could not save — will retry on your next edit")
         }
     }
 
