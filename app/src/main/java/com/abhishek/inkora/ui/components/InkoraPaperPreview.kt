@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.abhishek.inkora.domain.model.Note
 import com.abhishek.inkora.domain.model.RichText
+import com.abhishek.inkora.ui.theme.InkoraTokens
 import com.abhishek.inkora.ui.theme.mutedOnPaperColor
 import com.abhishek.inkora.ui.theme.onPaperColor
 import com.abhishek.inkora.ui.theme.paperColorFor
@@ -52,7 +53,7 @@ fun InkoraPaperPreview(
 ) {
     Box(
         modifier
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(InkoraTokens.PaperCardRadius))
             .background(
                 if (selected) MaterialTheme.colorScheme.primaryContainer
                 else Color.Transparent
@@ -107,7 +108,8 @@ fun InkoraPaperPreview(
             }
         }
         FoldedCorner(
-            modifier = Modifier.align(Alignment.TopEnd).size(28.dp)
+            modifier = Modifier.align(Alignment.TopEnd).size(28.dp),
+            paperColor = paper
         )
         if (note.isFavorite) {
             Icon(
