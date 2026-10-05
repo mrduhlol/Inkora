@@ -96,6 +96,7 @@ fun HomeScreen(
     var sortMenu by remember { mutableStateOf(false) }
     var folderDialog by remember { mutableStateOf(false) }
     var templateSheet by remember { mutableStateOf(false) }
+    var templateSheet by remember { mutableStateOf(false) }
 
     BackHandler(enabled = state.selecting) { vm.clearSelection() }
 
