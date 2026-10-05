@@ -1,6 +1,7 @@
 package com.abhishek.inkora.data.repository
 
 import com.abhishek.inkora.data.local.database.TagDao
+import com.abhishek.inkora.data.local.database.entities.TagEntity
 import com.abhishek.inkora.domain.model.Tag
 import com.abhishek.inkora.domain.repository.TagRepository
 import javax.inject.Inject
