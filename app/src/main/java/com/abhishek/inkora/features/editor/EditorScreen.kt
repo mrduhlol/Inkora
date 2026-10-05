@@ -3,6 +3,7 @@ package com.abhishek.inkora.features.editor
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -19,6 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -390,20 +393,11 @@ fun EditorScreen(
 
         val viewing = viewer
         if (viewing != null) {
-            Dialog(
-                onDismissRequest = { viewer = null },
-                properties = DialogProperties(usePlatformDefaultWidth = false)
-            ) {
-                Box(Modifier.fillMaxSize().background(Color.Black).padding(16.dp)) {
-                    LocalImageFull(viewing.file, Modifier.fillMaxSize().align(Alignment.Center))
-                    IconButton(
-                        onClick = { viewer = null },
-                        modifier = Modifier.align(Alignment.TopEnd)
-                    ) {
-                        Icon(Icons.Filled.Close, contentDescription = "Close", tint = Color.White)
-                    }
-                }
-            }
+            GalleryViewer(
+                attachments = attachments.filter { it.kind != "file" && !it.missing },
+                startId = viewing.id,
+                onDismiss = { viewer = null }
+            )
         }
 
         if (infoDialog && note != null) {
@@ -536,6 +530,46 @@ private fun InfoRow(label: String, value: String) {
 private fun formatDate(millis: Long): String =
     java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
         .format(java.util.Date(millis))
+
+/** Swipeable full-screen gallery over a note's images. Simple, no zoom engine. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun GalleryViewer(
+    attachments: List<Attachment>,
+    startId: Long,
+    onDismiss: () -> Unit
+) {
+    if (attachments.isEmpty()) return
+    val start = attachments.indexOfFirst { it.id == startId }.coerceAtLeast(0)
+    val pager = rememberPagerState(initialPage = start) { attachments.size }
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            HorizontalPager(state = pager, modifier = Modifier.fillMaxSize()) { page ->
+                val a = attachments[page]
+                Column(Modifier.fillMaxSize().padding(16.dp)) {
+                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        LocalImageFull(a.file, Modifier.fillMaxSize())
+                    }
+                    Text(
+                        "${page + 1} of ${attachments.size} · ${a.fileName}",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 8.dp)
+                    )
+                }
+            }
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
+            ) {
+                Icon(Icons.Filled.Close, contentDescription = "Close gallery", tint = Color.White)
+            }
+        }
+    }
+}
 
 /** Horizontal strip of attached image cards with remove actions and an add tile. */
 @Composable
