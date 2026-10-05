@@ -28,7 +28,8 @@ import org.robolectric.annotation.Config
 class MigrationTest {
 
     private fun v2File(context: Context, name: String): java.io.File {
-        val file = java.io.File(context.filesDir, name)
+        val file = context.getDatabasePath(name)
+        file.parentFile?.mkdirs()
         if (file.exists()) file.delete()
         val helper = FrameworkSQLiteOpenHelperFactory().create(
             androidx.sqlite.db.SupportSQLiteOpenHelper.Configuration.builder(context)
