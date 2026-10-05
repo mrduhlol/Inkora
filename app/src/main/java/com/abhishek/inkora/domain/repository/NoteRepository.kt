@@ -9,6 +9,8 @@ interface NoteRepository {
     fun observeArchived(): Flow<List<Note>>
     fun observeFavorites(): Flow<List<Note>>
     fun observeNotesInFolder(folderId: Long?): Flow<List<Note>>
+    fun observeNotesWithTag(tagId: Long): Flow<List<Note>>
+    fun observeNoteIdsWithAttachments(): Flow<List<Long>>
     fun searchNotes(query: String): Flow<List<Note>>
     suspend fun getById(id: Long): Note?
     suspend fun createBlank(): Long
