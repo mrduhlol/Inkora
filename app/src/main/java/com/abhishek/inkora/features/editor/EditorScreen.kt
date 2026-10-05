@@ -56,6 +56,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -92,6 +93,7 @@ import com.abhishek.inkora.ui.components.PageStyleSelector
 import com.abhishek.inkora.ui.theme.mutedOnPaperColor
 import com.abhishek.inkora.ui.theme.onPaperColor
 import com.abhishek.inkora.ui.theme.paperColorFor
+import kotlinx.coroutines.launch
 
 /**
  * Notebook-page editor over [RichDoc]: selection-scoped spans, headings,
@@ -110,6 +112,7 @@ fun EditorScreen(
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val folders by vm.allFolders.collectAsStateWithLifecycle()
+    val noteTags by vm.noteTags.collectAsStateWithLifecycle()
     val attachments by vm.attachments.collectAsStateWithLifecycle()
     var menu by remember { mutableStateOf(false) }
     var styleSheet by remember { mutableStateOf(false) }
@@ -124,6 +127,7 @@ fun EditorScreen(
     val note = state.note
     val titleFocus = remember { FocusRequester() }
     val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) vm.addImage(uri)
@@ -434,6 +438,66 @@ fun EditorScreen(
                     onSave = { png -> vm.addDrawing(png); showDraw = false }
                 )
             }
+        }
+
+        if (linkDialog) {
+            val sel = doc.selection
+            val selectedText = remember(doc, sel) {
+                val r = doc.rendered()
+                r.substring(sel.min.coerceIn(0, r.length), sel.max.coerceIn(0, r.length))
+            }
+            val existing = remember(doc, sel) { vm.linkAtSelection()?.url }
+            if (sel.min >= sel.max && existing == null) {
+                LaunchedEffect(Unit) {
+                    snackbar.showSnackbar("Select text first, then add a link")
+                    linkDialog = false
+                }
+            } else {
+                LinkDialog(
+                    selectedText = selectedText.ifBlank { "(link at cursor)" },
+                    existingUrl = existing,
+                    onDismiss = { linkDialog = false },
+                    onApply = { url ->
+                        vm.setLink(url)
+                        linkDialog = false
+                    },
+                    onRemove = { vm.removeLink(); linkDialog = false },
+                    onInvalid = {
+                        scope.launch {
+                            snackbar.showSnackbar("That doesn't look like a valid URL")
+                        }
+                    }
+                )
+            }
+        }
+
+        if (tableSizeDialog) {
+            TableSizeDialog(
+                onDismiss = { tableSizeDialog = false },
+                onCreate = { rows, cols -> tableSizeDialog = false; vm.insertTable(rows, cols) }
+            )
+        }
+
+        if (tableDialog) {
+            val group = remember(doc, doc.selection) { vm.tableGroup() }
+            if (group == null) {
+                LaunchedEffect(Unit) { tableDialog = false }
+            } else {
+                TableDialog(
+                    initial = vm.tableCells(group),
+                    onDismiss = { tableDialog = false },
+                    onCommit = { grid -> vm.setTableCells(group, grid); tableDialog = false }
+                )
+            }
+        }
+
+        if (tagDialog && note != null) {
+            TagsDialog(
+                tags = noteTags,
+                onDismiss = { tagDialog = false },
+                onAdd = { vm.addTag(it) },
+                onRemove = { vm.removeTag(it) }
+            )
         }
 
         if (styleSheet) {            ModalBottomSheet(onDismissRequest = { styleSheet = false }, sheetState = rememberModalBottomSheetState()) {
