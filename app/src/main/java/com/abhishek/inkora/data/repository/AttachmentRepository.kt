@@ -168,6 +168,38 @@ class AttachmentRepository @Inject constructor(
         runCatching { fileFor(e).readBytes() }.getOrNull()
     }
 
+    /** Full fidelity copy of a note's attachments for undo. Null when too big. */
+    data class AttachmentBackup(
+        val fileName: String,
+        val mimeType: String,
+        val kind: String,
+        val width: Int,
+        val height: Int,
+        val bytes: ByteArray
+    )
+
+    suspend fun snapshotForNote(noteId: Long, maxTotal: Long = 5L * 1024 * 1024): List<AttachmentBackup>? =
+        withContext(Dispatchers.IO) {
+            val rows = dao.listForNote(noteId)
+            var total = 0L
+            val out = mutableListOf<AttachmentBackup>()
+            for (e in rows) {
+                val bytes = runCatching { fileFor(e).readBytes() }.getOrNull() ?: continue
+                total += bytes.size
+                if (total > maxTotal) return@withContext null
+                out.add(AttachmentBackup(e.fileName, e.mimeType, e.kind, e.width, e.height, bytes))
+            }
+            out
+        }
+
+    suspend fun restoreSnapshot(noteId: Long, backup: AttachmentBackup) {
+        if (backup.kind == "file") {
+            storeFileBytes(noteId, backup.fileName, backup.mimeType, backup.bytes)
+        } else {
+            storeBytes(noteId, backup.fileName, backup.mimeType, backup.bytes)
+        }
+    }
+
     suspend fun remove(id: Long) = withContext(Dispatchers.IO) {
         dao.getById(id)?.let { runCatching { fileFor(it).delete() } }
         dao.deleteById(id)
