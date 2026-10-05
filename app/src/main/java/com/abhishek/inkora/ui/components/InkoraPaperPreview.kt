@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,6 +85,7 @@ fun InkoraPaperPreview(
             RichText.displayTitle(note.title, note.content, note.contentFormat)
         }
         val titleText = rememberHighlighted(displayTitle.ifBlank { "Untitled" }, query)
+        val haptics = LocalHapticFeedback.current
         val bodyText = rememberHighlighted(
             if (hideContent) "Locked note" else excerpt.ifBlank { "No text yet" },
             query
@@ -123,7 +126,10 @@ fun InkoraPaperPreview(
                 contentDescription = "Favorited",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(10.dp).size(18.dp)
-                    .clickable { onToggleFavorite(note.id) }
+                    .clickable {
+                        haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                        onToggleFavorite(note.id)
+                    }
             )
         }
         if (note.isPinned) {
