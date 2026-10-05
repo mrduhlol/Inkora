@@ -144,6 +144,7 @@ fun HomeScreen(
                     onOverflow = { overflow = true },
                     overflowExpanded = overflow,
                     onOverflowDismiss = { overflow = false },
+                    onNewFromTemplate = { templateSheet = true },
                     onOpenTrash = onOpenTrash,
                     onOpenArchive = onOpenArchive
                 )
@@ -259,6 +260,7 @@ private fun BrandRow(
     onOverflow: () -> Unit,
     overflowExpanded: Boolean,
     onOverflowDismiss: () -> Unit,
+    onNewFromTemplate: () -> Unit,
     onOpenTrash: () -> Unit,
     onOpenArchive: () -> Unit
 ) {
@@ -273,7 +275,7 @@ private fun BrandRow(
         Box {
             IconButton(onClick = onOverflow) { Icon(Icons.Filled.MoreVert, "More options") }
             DropdownMenu(expanded = overflowExpanded, onDismissRequest = onOverflowDismiss) {
-                DropdownMenuItem(text = { Text("New from template") }, onClick = { onOverflowDismiss(); templateSheet = true })
+                DropdownMenuItem(text = { Text("New from template") }, onClick = { onOverflowDismiss(); onNewFromTemplate() })
                 DropdownMenuItem(text = { Text("Archive") }, onClick = { onOverflowDismiss(); onOpenArchive() })
                 DropdownMenuItem(text = { Text("Trash") }, onClick = { onOverflowDismiss(); onOpenTrash() })
             }
