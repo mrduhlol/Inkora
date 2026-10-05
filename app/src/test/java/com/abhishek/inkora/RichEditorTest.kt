@@ -166,4 +166,57 @@ class RichEditorTest {
         val one = docOf("A\nB", TextRange(0, 1)).toggleBlock(BlockKind.BULLET)
         assertTrue(one.copy(selection = TextRange(0, 5)).activeBlocks().isEmpty())
     }
+
+    @Test fun link_attachRemoveAndLookup() {
+        var d = docOf("OpenAI rules", TextRange(0, 6)).setLink("https://openai.com")
+        assertEquals("OpenAI rules", d.toRich().text)
+        assertEquals("https://openai.com", d.linkAtSelection()?.url)
+        // Links survive typing elsewhere.
+        val typed = d.rendered().replace("rules", "rules!")
+        d = d.onInput(typed, TextRange(typed.length, typed.length))
+        assertEquals(1, d.toRich().links.size)
+        // Remove via selection.
+        d = d.copy(selection = TextRange(0, 6)).removeLink()
+        assertTrue(d.toRich().links.isEmpty())
+    }
+
+    @Test fun link_collapsedIsNoop() {
+        val d = docOf("Hello", TextRange(2, 2)).setLink("https://x.com")
+        assertTrue(d.toRich().links.isEmpty())
+        assertEquals(null, docOf("Hello", TextRange(2, 2)).linkAtSelection())
+    }
+
+    @Test fun code_toggleEnterAndExit() {
+        var d = docOf("print(1)", TextRange(0, 8)).toggleBlock(BlockKind.CODE)
+        assertEquals(BlockKind.CODE, d.lines[0].block)
+        assertTrue(d.activeBlocks().contains(BlockKind.CODE))
+        // Enter continues the code block.
+        d = d.onInput("print(1)\n", TextRange(9, 9))
+        assertEquals(BlockKind.CODE, d.lines[1].block)
+        // Enter on the blank code line exits to paragraph.
+        d = d.onInput("print(1)\n\n", TextRange(10, 10))
+        assertEquals(BlockKind.PARAGRAPH, d.lines[1].block)
+    }
+
+    @Test fun table_insertEditEnterAndExit() {
+        var d = docOf("", TextRange(0, 0)).insertTable(2, 2)
+        assertEquals(2, d.lines.size)
+        assertTrue(d.lines.all { it.block == BlockKind.TABLE })
+        val group = d.tableGroupAtCursor()
+        assertTrue(group != null)
+        // Structured cell edit.
+        d = d.setTableCells(group!!, listOf(listOf("Physics", "85"), listOf("Maths", "90")))
+        assertEquals("Physics │ 85", d.lines[0].text)
+        assertEquals("Maths │ 90", d.lines[1].text)
+        assertEquals(listOf(listOf("Physics", "85"), listOf("Maths", "90")), d.tableCells(group))
+        // Enter at end of last row adds an empty row of equal width.
+        val rendered = d.rendered()
+        d = d.onInput("$rendered\n", TextRange(rendered.length + 1, rendered.length + 1))
+        assertEquals(3, d.lines.size)
+        assertEquals(" │ ", d.lines[2].text)
+        // Enter on the blank row exits the table.
+        val rendered2 = d.rendered()
+        d = d.onInput("$rendered2\n", TextRange(rendered2.length + 1, rendered2.length + 1))
+        assertEquals(BlockKind.PARAGRAPH, d.lines[2].block)
+    }
 }
