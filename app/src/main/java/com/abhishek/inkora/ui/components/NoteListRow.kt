@@ -58,7 +58,9 @@ fun NoteListRow(
     selecting: Boolean,
     onOpen: (Long) -> Unit,
     onToggleSelect: (Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hideContent: Boolean = false,
+    compact: Boolean = false
 ) {
     val bgKey = note.backgroundStyle.ifBlank { "cream" }.let {
         when (it) { "white", "gray", "dark", "custom" -> it; else -> "cream" }
@@ -83,7 +85,7 @@ fun NoteListRow(
                 onLongClick = { onToggleSelect(note.id) }
             )
             .semantics { contentDescription = "Open note $title" }
-            .padding(10.dp),
+            .padding(if (compact) 6.dp else 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (selecting) {
@@ -92,7 +94,7 @@ fun NoteListRow(
         }
         // Mini paper swatch with folded corner.
         Box(
-            Modifier.size(width = 40.dp, height = 52.dp)
+            Modifier.size(width = if (compact) 32.dp else 40.dp, height = if (compact) 42.dp else 52.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .background(paper)
         ) {
@@ -116,7 +118,7 @@ fun NoteListRow(
                     Icon(Icons.Filled.Star, contentDescription = "Favorited", modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
                 }
             }
-            if (excerpt.isNotBlank()) {
+            if (!hideContent && excerpt.isNotBlank()) {
                 Text(
                     excerpt.lines().firstOrNull().orEmpty(),
                     style = MaterialTheme.typography.bodySmall,
