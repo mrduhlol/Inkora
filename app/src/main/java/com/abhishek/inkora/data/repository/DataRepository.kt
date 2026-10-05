@@ -7,13 +7,16 @@ import com.abhishek.inkora.data.export.ExportAttachment
 import com.abhishek.inkora.data.export.ExportFolder
 import com.abhishek.inkora.data.export.ExportNote
 import com.abhishek.inkora.data.export.ExportPayload
+import com.abhishek.inkora.data.export.ExportTag
 import com.abhishek.inkora.data.export.InkoraExport
 import com.abhishek.inkora.data.local.database.AttachmentDao
 import com.abhishek.inkora.data.local.database.FolderDao
 import com.abhishek.inkora.data.local.database.InkoraDatabase
 import com.abhishek.inkora.data.local.database.NoteDao
+import com.abhishek.inkora.data.local.database.TagDao
 import com.abhishek.inkora.data.local.database.entities.FolderEntity
 import com.abhishek.inkora.data.local.database.entities.NoteEntity
+import com.abhishek.inkora.data.local.database.entities.TagEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
@@ -47,23 +50,28 @@ class DataRepository @Inject constructor(
     private val noteDao: NoteDao,
     private val folderDao: FolderDao,
     private val attachmentDao: AttachmentDao,
+    private val tagDao: TagDao,
     private val attachments: AttachmentRepository
 ) {
     suspend fun exportAll(): ByteArray = withContext(Dispatchers.IO) {
         val notes = noteDao.observeActive().first() + noteDao.observeArchived().first()
         val folders = folderDao.observe().first()
+        val tags = tagDao.listTags()
         val outNotes = notes.map { n ->
             ExportNote(
                 n.title, n.content, n.contentFormat, n.createdAt, n.updatedAt,
                 n.isFavorite, n.isArchived, n.isPinned, n.folderId,
-                n.backgroundStyle, n.backgroundColor, n.textColor, n.pageStyle
+                n.backgroundStyle, n.backgroundColor, n.textColor, n.pageStyle,
+                tagDao.listTagsForNote(n.id).map { it.id }
             )
         }
         val outAttachments = mutableListOf<ExportAttachment>()
         notes.forEachIndexed { index, n ->
             attachmentDao.listForNote(n.id).forEach { a ->
                 val bytes = attachments.readBytes(a.id)
-                val capped = bytes?.let { capImage(it) }
+                // Images are downsampled for portability; generic files embed
+                // as-is up to the backup size cap.
+                val capped = if (a.kind == "file") bytes else bytes?.let { capImage(it) }
                 outAttachments.add(
                     ExportAttachment(
                         noteIndex = index,
@@ -71,7 +79,9 @@ class DataRepository @Inject constructor(
                         mimeType = a.mimeType,
                         width = a.width,
                         height = a.height,
-                        dataBase64 = capped?.let { Base64.encodeToString(it, Base64.NO_WRAP) } ?: ""
+                        dataBase64 = capped?.let { Base64.encodeToString(it, Base64.NO_WRAP) } ?: "",
+                        kind = a.kind,
+                        sizeBytes = a.sizeBytes
                     )
                 )
             }
@@ -79,6 +89,7 @@ class DataRepository @Inject constructor(
         val payload = ExportPayload(
             exportedAt = System.currentTimeMillis(),
             folders = folders.map { ExportFolder(it.id, it.name) },
+            tags = tags.map { ExportTag(it.id, it.name) },
             notes = outNotes,
             attachments = outAttachments
         )
