@@ -16,6 +16,7 @@ import com.abhishek.inkora.domain.model.ParaAlign
 import com.abhishek.inkora.domain.model.RichAlign
 import com.abhishek.inkora.domain.model.RichBlock
 import com.abhishek.inkora.domain.model.RichContent
+import com.abhishek.inkora.domain.model.RichLink
 import com.abhishek.inkora.domain.model.RichSpan
 import com.abhishek.inkora.domain.model.RichText
 import com.abhishek.inkora.domain.model.SpanKind
@@ -31,6 +32,7 @@ import com.abhishek.inkora.domain.model.SpanKind
 data class EditLine(
     val text: String = "",
     val spans: List<RichSpan> = emptyList(), // relative to [text]
+    val links: List<RichLink> = emptyList(), // relative to [text]
     val block: BlockKind = BlockKind.PARAGRAPH,
     val checked: Boolean = false,
     val indent: Int = 0, // 0..4, rendered as em-space prefix
@@ -63,10 +65,15 @@ data class RichDoc(
                         val e = (it.end - lineStart).coerceIn(0, t.length)
                         if (s < e) RichSpan(s, e, it.kind) else null
                     }
+                    val relLinks = c.links.mapNotNull {
+                        val s = (it.start - lineStart).coerceIn(0, t.length)
+                        val e = (it.end - lineStart).coerceIn(0, t.length)
+                        if (s < e) RichLink(s, e, it.url) else null
+                    }
                     val b = c.blocks.firstOrNull { it.line == i }
                     val a = c.aligns.firstOrNull { it.line == i }
                     EditLine(
-                        t, rel, b?.kind ?: BlockKind.PARAGRAPH, b?.checked ?: false,
+                        t, rel, relLinks, b?.kind ?: BlockKind.PARAGRAPH, b?.checked ?: false,
                         b?.indent?.coerceIn(0, 4) ?: 0, a?.align ?: ParaAlign.LEFT
                     )
                 }.ifEmpty { listOf(EditLine()) },
@@ -90,6 +97,7 @@ data class RichDoc(
     fun toRich(): RichContent {
         val sb = StringBuilder()
         val spans = mutableListOf<RichSpan>()
+        val links = mutableListOf<RichLink>()
         val blocks = mutableListOf<RichBlock>()
         val aligns = mutableListOf<RichAlign>()
         lines.forEachIndexed { i, l ->
@@ -97,12 +105,13 @@ data class RichDoc(
             val base = sb.length
             sb.append(l.text)
             l.spans.forEach { spans.add(RichSpan(base + it.start, base + it.end, it.kind)) }
+            l.links.forEach { links.add(RichLink(base + it.start, base + it.end, it.url)) }
             if (l.block != BlockKind.PARAGRAPH || l.indent != 0) {
                 blocks.add(RichBlock(i, l.block, l.checked, l.indent.coerceIn(0, 4)))
             }
             if (l.align != ParaAlign.LEFT) aligns.add(RichAlign(i, l.align))
         }
-        return RichContent(sb.toString(), spans, blocks, aligns)
+        return RichContent(sb.toString(), spans, blocks, aligns, links)
     }
 
     /** Rendered text (with generated prefixes) — the string BasicTextField edits. */
