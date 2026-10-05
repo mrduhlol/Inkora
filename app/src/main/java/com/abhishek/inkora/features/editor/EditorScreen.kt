@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
@@ -94,6 +95,7 @@ import com.abhishek.inkora.ui.components.InkoraTopBar
 import com.abhishek.inkora.ui.components.LocalImageFull
 import com.abhishek.inkora.ui.components.LocalImageThumb
 import com.abhishek.inkora.ui.components.PageStyleSelector
+import com.abhishek.inkora.ui.components.TagChip
 import com.abhishek.inkora.ui.theme.mutedOnPaperColor
 import com.abhishek.inkora.ui.theme.onPaperColor
 import com.abhishek.inkora.ui.theme.paperColorFor
@@ -245,7 +247,9 @@ fun EditorScreen(
             )
         }
     ) { pad ->
-        Column(Modifier.fillMaxSize().padding(pad)) {
+        // Comfortable reading width on large screens; phones use full width.
+        Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.TopCenter) {
+        Column(Modifier.fillMaxSize().widthIn(max = 720.dp)) {
             InkoraPaperSurface(
                 modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 16.dp),
                 background = note?.backgroundStyle ?: "cream",
@@ -371,6 +375,7 @@ fun EditorScreen(
                 modifier = Modifier.navigationBarsPadding().imePadding()
             )
         }
+        }
 
         if (folderDialog) {
             AlertDialog(
@@ -441,7 +446,22 @@ fun EditorScreen(
                         InfoRow("Folder", folderName)
                         InfoRow("Favorite", if (note.isFavorite) "Yes" else "No")
                         InfoRow("Pinned", if (note.isPinned) "Yes" else "No")
-                        InfoRow("Images", attachments.size.toString())
+                        InfoRow("Archived", if (note.isArchived) "Yes" else "No")
+                        InfoRow("Images", attachments.count { it.kind != "file" }.toString())
+                        InfoRow("Files", attachments.count { it.kind == "file" }.toString())
+                        if (noteTags.isNotEmpty()) {
+                            Text(
+                                "Tags",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(top = 6.dp)
+                            )
+                            Row(
+                                Modifier.fillMaxWidth().padding(top = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                noteTags.forEach { t -> TagChip(t.name) }
+                            }
+                        }
                     }
                 }
             )
