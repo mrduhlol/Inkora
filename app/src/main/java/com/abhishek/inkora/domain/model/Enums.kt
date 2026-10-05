@@ -41,3 +41,5 @@ enum class SortOrder(val key: String) {
 }
 
 enum class HomeViewMode(val key: String) { GRID("grid"), LIST("list") }
+
+enum class CardDensity(val key: String) { COMFORTABLE("comfortable"), COMPACT("compact") }
