@@ -119,6 +119,28 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = hiltViewModel()) 
                     )
                 }
             }
+            Label("Card density", top = 16.dp)
+            Row(Modifier.padding(top = 4.dp)) {
+                com.abhishek.inkora.domain.model.CardDensity.entries.forEach {
+                    androidx.compose.material3.FilterChip(
+                        selected = it == s.cardDensity,
+                        onClick = { vm.setDensity(it) },
+                        label = { Text(it.key) },
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
+            }
+            HorizontalDivider(Modifier.padding(vertical = 20.dp))
+            Section("Privacy")
+            SettingRow("App lock", "Require your device screen lock to open Inkora") {
+                Switch(checked = s.appLock, onCheckedChange = vm::setAppLock)
+            }
+            SettingRow("Hide previews", "Show “Locked note” instead of content in lists") {
+                Switch(checked = s.hidePreviews, onCheckedChange = vm::setHidePreviews)
+            }
+            SettingRow("Secure screenshots", "Block screenshots and screen recording (FLAG_SECURE)") {
+                Switch(checked = s.secureScreenshots, onCheckedChange = vm::setSecureScreenshots)
+            }
             HorizontalDivider(Modifier.padding(vertical = 20.dp))
             Section("Storage & Data")
             Text(
@@ -144,10 +166,16 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = hiltViewModel()) 
             HorizontalDivider(Modifier.padding(vertical = 20.dp))
             Section("About")
             Text(
-                "Inkora 1.3 — offline-first notebook. No account, no cloud, no tracking.",
+                "Inkora ${com.abhishek.inkora.BuildConfig.VERSION_NAME} — offline-first notebook. No account, no cloud, no tracking.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp)
+            )
+            Text(
+                "Source: github.com/mrduhlol/Inkora",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
 
