@@ -36,6 +36,9 @@ class NoteRepositoryImpl @Inject constructor(
     override fun observeFavorites(): Flow<List<Note>> = dao.observeFavorites().map { it.map(NoteEntity::toDomain) }
     override fun observeNotesInFolder(folderId: Long?): Flow<List<Note>> =
         dao.observeInFolder(folderId).map { it.map(NoteEntity::toDomain) }
+    override fun observeNotesWithTag(tagId: Long): Flow<List<Note>> =
+        dao.observeNotesWithTag(tagId).map { it.map(NoteEntity::toDomain) }
+    override fun observeNoteIdsWithAttachments(): Flow<List<Long>> = dao.observeNoteIdsWithAttachments()
     override fun searchNotes(query: String): Flow<List<Note>> = dao.search(query).map { it.map(NoteEntity::toDomain) }
     override suspend fun getById(id: Long): Note? = dao.getById(id)?.toDomain()
     override suspend fun createBlank(): Long = dao.upsert(NoteEntity())
