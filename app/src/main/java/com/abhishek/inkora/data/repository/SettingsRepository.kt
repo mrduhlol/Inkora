@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.abhishek.inkora.domain.model.AccentColor
 import com.abhishek.inkora.domain.model.AppTheme
+import com.abhishek.inkora.domain.model.CardDensity
 import com.abhishek.inkora.domain.model.HomeViewMode
 import com.abhishek.inkora.domain.model.PageStyle
 import com.abhishek.inkora.domain.model.PaperBackground
@@ -25,7 +26,11 @@ data class InkoraSettings(
     val autoSave: Boolean = true,
     val sortOrder: SortOrder = SortOrder.UPDATED_DESC,
     val gridColumns: Int = 0, // 0 = adaptive
-    val viewMode: HomeViewMode = HomeViewMode.GRID
+    val viewMode: HomeViewMode = HomeViewMode.GRID,
+    val cardDensity: CardDensity = CardDensity.COMFORTABLE,
+    val appLock: Boolean = false,
+    val hidePreviews: Boolean = false,
+    val secureScreenshots: Boolean = false
 )
 
 class SettingsRepository @Inject constructor(
@@ -42,6 +47,10 @@ class SettingsRepository @Inject constructor(
         val SORT = stringPreferencesKey("sort")
         val GRID = intPreferencesKey("grid")
         val VIEW = stringPreferencesKey("view_mode")
+        val DENSITY = stringPreferencesKey("card_density")
+        val APP_LOCK = stringPreferencesKey("app_lock")
+        val HIDE_PREVIEWS = stringPreferencesKey("hide_previews")
+        val SECURE_SHOTS = stringPreferencesKey("secure_shots")
     }
 
     val settings: Flow<InkoraSettings> = store.data.map { p ->
@@ -55,7 +64,11 @@ class SettingsRepository @Inject constructor(
             autoSave = (p[K.AUTOSAVE] ?: "1") == "1",
             sortOrder = runCatching { SortOrder.valueOf(p[K.SORT] ?: "UPDATED_DESC") }.getOrDefault(SortOrder.UPDATED_DESC),
             gridColumns = p[K.GRID] ?: 0,
-            viewMode = runCatching { HomeViewMode.valueOf(p[K.VIEW] ?: "GRID") }.getOrDefault(HomeViewMode.GRID)
+            viewMode = runCatching { HomeViewMode.valueOf(p[K.VIEW] ?: "GRID") }.getOrDefault(HomeViewMode.GRID),
+            cardDensity = runCatching { CardDensity.valueOf(p[K.DENSITY] ?: "COMFORTABLE") }.getOrDefault(CardDensity.COMFORTABLE),
+            appLock = (p[K.APP_LOCK] ?: "0") == "1",
+            hidePreviews = (p[K.HIDE_PREVIEWS] ?: "0") == "1",
+            secureScreenshots = (p[K.SECURE_SHOTS] ?: "0") == "1"
         )
     }
 
@@ -69,4 +82,8 @@ class SettingsRepository @Inject constructor(
     suspend fun setSort(v: SortOrder) = store.edit { it[K.SORT] = v.name }
     suspend fun setGrid(v: Int) = store.edit { it[K.GRID] = v.coerceIn(0, 4) }
     suspend fun setViewMode(v: HomeViewMode) = store.edit { it[K.VIEW] = v.name }
+    suspend fun setDensity(v: CardDensity) = store.edit { it[K.DENSITY] = v.name }
+    suspend fun setAppLock(v: Boolean) = store.edit { it[K.APP_LOCK] = if (v) "1" else "0" }
+    suspend fun setHidePreviews(v: Boolean) = store.edit { it[K.HIDE_PREVIEWS] = if (v) "1" else "0" }
+    suspend fun setSecureScreenshots(v: Boolean) = store.edit { it[K.SECURE_SHOTS] = if (v) "1" else "0" }
 }
