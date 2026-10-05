@@ -89,6 +89,36 @@ object RichText {
     fun spansIn(c: RichContent, start: Int, end: Int): List<RichSpan> =
         c.spans.filter { it.end > start && it.start < end }
 
+    // ---------- link ops ----------
+
+    /** Normalize user input to an https URL. Returns null when unusable. */
+    fun normalizeUrl(raw: String): String? {
+        val t = raw.trim()
+        if (t.isEmpty() || t.contains(' ') || t.contains('\n')) return null
+        val withScheme = if (t.contains("://")) t else "https://$t"
+        if (!withScheme.contains('.')) return null
+        return withScheme.take(500)
+    }
+
+    fun linkAt(c: RichContent, offset: Int): RichLink? =
+        c.links.firstOrNull { offset in it.start until it.end }
+
+    /** Attach [url] to [start,end). Replaces overlapping links; never touches text. */
+    fun setLink(c: RichContent, start: Int, end: Int, url: String): RichContent {
+        val s = start.coerceIn(0, c.text.length)
+        val e = end.coerceIn(0, c.text.length)
+        if (s >= e) return c
+        val kept = c.links.filterNot { it.end > s && it.start < e }
+        return c.copy(links = (kept + RichLink(s, e, url)).sortedWith(compareBy({ it.start }, { it.end })))
+    }
+
+    fun removeLinksIn(c: RichContent, start: Int, end: Int): RichContent {
+        val s = start.coerceIn(0, c.text.length)
+        val e = end.coerceIn(0, c.text.length)
+        if (s >= e) return c
+        return c.copy(links = c.links.filterNot { it.end > s && it.start < e })
+    }
+
     // ---------- block ops (line-scoped) ----------
 
     fun linesOf(text: String): List<String> = text.split('\n')
