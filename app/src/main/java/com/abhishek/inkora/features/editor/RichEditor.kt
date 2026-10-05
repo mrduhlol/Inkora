@@ -316,6 +316,42 @@ data class RichDoc(
         }
         val parsed = newLines.mapIndexed { i, raw -> parseLine(raw, oldFor(i)) }.toMutableList()
         val srcText = stripExpected(newLines[srcIdx], src)
+        // CODE continues line-by-line; a blank code line exits to paragraph.
+        if (src.block == BlockKind.CODE) {
+            if (srcText.isBlank()) {
+                parsed[srcIdx] = parsed[srcIdx].copy(block = BlockKind.PARAGRAPH)
+                val withFixed = copy(lines = parsed.ifEmpty { listOf(EditLine()) })
+                return withFixed.copy(
+                    selection = TextRange(withFixed.renderedLineStart(withFixed.rendered(), srcIdx))
+                )
+            }
+            parsed[newIdx] = parsed[newIdx].copy(block = BlockKind.CODE, spans = emptyList(), links = emptyList())
+            val withFixed = copy(lines = parsed)
+            val r = withFixed.rendered()
+            val ls = withFixed.renderedLineStart(r, newIdx)
+            return withFixed.copy(selection = TextRange(ls + withFixed.prefixLenAt(newIdx)))
+        }
+        // TABLE continues with an empty row of the same width; a blank row exits.
+        if (src.block == BlockKind.TABLE) {
+            val cols = RichText.tableCells(src.text).size.coerceAtLeast(1)
+            if (srcText.replace("│", "").isBlank()) {
+                parsed[srcIdx] = parsed[srcIdx].copy(block = BlockKind.PARAGRAPH)
+                val withFixed = copy(lines = parsed.ifEmpty { listOf(EditLine()) })
+                return withFixed.copy(
+                    selection = TextRange(withFixed.renderedLineStart(withFixed.rendered(), srcIdx))
+                )
+            }
+            parsed[newIdx] = parsed[newIdx].copy(
+                text = RichText.buildTableRow(List(cols) { "" }),
+                block = BlockKind.TABLE,
+                spans = emptyList(),
+                links = emptyList()
+            )
+            val withFixed = copy(lines = parsed)
+            val r = withFixed.rendered()
+            val ls = withFixed.renderedLineStart(r, newIdx)
+            return withFixed.copy(selection = TextRange(ls + withFixed.prefixLenAt(newIdx)))
+        }
         return when (src.block) {
             BlockKind.BULLET, BlockKind.NUMBERED, BlockKind.CHECK -> {
                 if (srcText.isBlank()) {
