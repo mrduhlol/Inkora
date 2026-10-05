@@ -6,9 +6,10 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * Local image attachment metadata. Bytes live in app-private storage
- * (`note_images/`), referenced here — never raw blobs in Room.
- * Rows survive trash/restore; permanent note deletion removes rows + files.
+ * Local attachment metadata. Bytes live in app-private storage
+ * (`note_images/` for images, `note_files/` for generic files) — never raw
+ * blobs in Room. Rows survive trash/restore; permanent note deletion removes
+ * rows + files.
  */
 @Entity(
     tableName = "attachments",
@@ -29,5 +30,8 @@ data class AttachmentEntity(
     val mimeType: String = "image/jpeg",
     val width: Int = 0,
     val height: Int = 0,
+    /** "image" or "file". Images render inline; files render as compact cards. */
+    val kind: String = "image",
+    val sizeBytes: Long = 0L,
     val createdAt: Long = System.currentTimeMillis()
 )
