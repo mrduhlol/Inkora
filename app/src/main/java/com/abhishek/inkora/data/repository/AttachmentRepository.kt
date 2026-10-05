@@ -18,33 +18,44 @@ data class Attachment(
     val id: Long,
     val noteId: Long,
     val file: File?,
+    val fileName: String = "",
     val mimeType: String,
+    val kind: String = "image",
+    val sizeBytes: Long = 0L,
     val width: Int,
     val height: Int,
     val missing: Boolean
 )
 
 /**
- * App-private image storage. Bytes live under `files/note_images/`, Room keeps
- * metadata only. Missing files degrade to a placeholder card — never a crash.
+ * App-private attachment storage. Images live under `files/note_images/`,
+ * generic files under `files/note_files/`; Room keeps metadata only. Missing
+ * files degrade to a placeholder card — never a crash.
  */
 @Singleton
 class AttachmentRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val dao: AttachmentDao
 ) {
-    private val dir: File get() = File(context.filesDir, "note_images").apply { mkdirs() }
+    private val imageDir: File get() = File(context.filesDir, "note_images").apply { mkdirs() }
+    private val fileDir: File get() = File(context.filesDir, "note_files").apply { mkdirs() }
+
+    private fun dirFor(kind: String): File = if (kind == "file") fileDir else imageDir
 
     fun observe(noteId: Long): Flow<List<Attachment>> =
         dao.observeForNote(noteId).map { list -> list.map(::resolve) }
 
     suspend fun list(noteId: Long): List<Attachment> = dao.listForNote(noteId).map(::resolve)
 
-    fun fileFor(entity: AttachmentEntity): File = File(dir, "${entity.id}_${entity.fileName}")
+    fun fileFor(entity: AttachmentEntity): File = File(dirFor(entity.kind), "${entity.id}_${entity.fileName}")
 
     private fun resolve(e: AttachmentEntity): Attachment {
         val f = fileFor(e)
-        return Attachment(e.id, e.noteId, f.takeIf { it.exists() }, e.mimeType, e.width, e.height, !f.exists())
+        val size = if (f.exists()) f.length() else e.sizeBytes
+        return Attachment(
+            e.id, e.noteId, f.takeIf { it.exists() }, e.fileName, e.mimeType,
+            e.kind, size, e.width, e.height, !f.exists()
+        )
     }
 
     /** Copy a picked image into private storage. Returns attachment id or null. */
@@ -59,7 +70,7 @@ class AttachmentRepository @Inject constructor(
             val rowId = dao.insert(
                 AttachmentEntity(noteId = noteId, fileName = "img.$ext", mimeType = mime)
             )
-            val dest = File(dir, "${rowId}_img.$ext")
+            val dest = File(imageDir, "${rowId}_img.$ext")
             context.contentResolver.openInputStream(uri)?.use { input ->
                 dest.outputStream().use { input.copyTo(it) }
             } ?: throw IllegalStateException("unreadable image")
@@ -68,25 +79,69 @@ class AttachmentRepository @Inject constructor(
             dao.insert(
                 AttachmentEntity(
                     id = rowId, noteId = noteId, fileName = "img.$ext", mimeType = mime,
-                    width = bounds.outWidth, height = bounds.outHeight
+                    width = bounds.outWidth, height = bounds.outHeight,
+                    kind = "image", sizeBytes = dest.length()
                 )
             )
             rowId
         }.getOrNull()
     }
 
+    /**
+     * Copy a picked generic file (PDF, TXT, document) into private storage.
+     * Files over 25MB are refused to protect device storage. Returns id or null.
+     */
+    suspend fun addFile(noteId: Long, uri: Uri): Long? = withContext(Dispatchers.IO) {
+        runCatching {
+            val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
+            val name = queryName(uri).takeLast(80).ifBlank { "file-${System.currentTimeMillis()}" }
+            val rowId = dao.insert(
+                AttachmentEntity(noteId = noteId, fileName = name, mimeType = mime, kind = "file")
+            )
+            val dest = File(fileDir, "${rowId}_$name")
+            var total = 0L
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                dest.outputStream().use { out ->
+                    val buf = ByteArray(8192)
+                    while (true) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        total += n
+                        if (total > MAX_FILE_BYTES) throw IllegalStateException("file too large")
+                        out.write(buf, 0, n)
+                    }
+                }
+            } ?: throw IllegalStateException("unreadable file")
+            dao.insert(
+                AttachmentEntity(
+                    id = rowId, noteId = noteId, fileName = name, mimeType = mime,
+                    kind = "file", sizeBytes = total
+                )
+            )
+            rowId
+        }.getOrNull()
+    }
+
+    private fun queryName(uri: Uri): String = runCatching {
+        context.contentResolver.query(uri, null, null, null, null)?.use { c ->
+            val idx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (idx >= 0 && c.moveToFirst()) c.getString(idx) else ""
+        }.orEmpty()
+    }.getOrDefault("")
+
     /** Store raw bytes (import path). */
     suspend fun storeBytes(noteId: Long, fileName: String, mime: String, bytes: ByteArray): Long =
         withContext(Dispatchers.IO) {
             val rowId = dao.insert(AttachmentEntity(noteId = noteId, fileName = fileName, mimeType = mime))
-            val dest = File(dir, "${rowId}_$fileName")
+            val dest = File(imageDir, "${rowId}_$fileName")
             dest.writeBytes(bytes)
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
             dao.insert(
                 AttachmentEntity(
                     id = rowId, noteId = noteId, fileName = fileName, mimeType = mime,
-                    width = bounds.outWidth, height = bounds.outHeight
+                    width = bounds.outWidth, height = bounds.outHeight,
+                    kind = "image", sizeBytes = bytes.size.toLong()
                 )
             )
             rowId
@@ -109,6 +164,13 @@ class AttachmentRepository @Inject constructor(
     }
 
     suspend fun imagesBytes(): Long = withContext(Dispatchers.IO) {
-        runCatching { dir.walkTopDown().filter { it.isFile }.sumOf { it.length() } }.getOrDefault(0L)
+        runCatching {
+            (imageDir.walkTopDown().filter { it.isFile }.sumOf { it.length() } +
+                fileDir.walkTopDown().filter { it.isFile }.sumOf { it.length() })
+        }.getOrDefault(0L)
+    }
+
+    companion object {
+        const val MAX_FILE_BYTES = 25L * 1024 * 1024
     }
 }
