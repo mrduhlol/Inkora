@@ -59,6 +59,10 @@ class HomeViewModel @Inject constructor(
     private val filter = MutableStateFlow(HomeFilter.ALL)
     private val tagFilter = MutableStateFlow<Long?>(null)
 
+    /** Last batch moved to trash/archived, restorable via undo. */
+    private var lastTrashed: List<Long> = emptyList()
+    private var lastArchived: List<Long> = emptyList()
+
     val allTags = tags.observeTags()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -200,10 +204,21 @@ class HomeViewModel @Inject constructor(
 
     fun clearSelection() { selection.value = emptySet() }
 
-    fun trashSelected() {
-        val ids = selection.value
+    /** Moves [ids] to trash and returns the count (for undo feedback). */
+    fun trashSelected(): Int {
+        val ids = selection.value.toList()
+        if (ids.isEmpty()) return 0
         clearSelection()
+        lastTrashed = ids
+        lastArchived = emptyList()
         viewModelScope.launch { ids.forEach { notes.moveToTrash(it) } }
+        return ids.size
+    }
+
+    fun undoTrash() {
+        val ids = lastTrashed
+        lastTrashed = emptyList()
+        viewModelScope.launch { ids.forEach { notes.restore(it) } }
     }
 
     fun favoriteSelected(fav: Boolean) {
@@ -218,10 +233,20 @@ class HomeViewModel @Inject constructor(
         clearSelection()
     }
 
-    fun archiveSelected() {
-        val ids = selection.value
+    fun archiveSelected(): Int {
+        val ids = selection.value.toList()
+        if (ids.isEmpty()) return 0
         clearSelection()
+        lastArchived = ids
+        lastTrashed = emptyList()
         viewModelScope.launch { ids.forEach { notes.setArchived(it, true) } }
+        return ids.size
+    }
+
+    fun undoArchive() {
+        val ids = lastArchived
+        lastArchived = emptyList()
+        viewModelScope.launch { ids.forEach { notes.setArchived(it, false) } }
     }
 
     fun moveSelected(folderId: Long?) {
