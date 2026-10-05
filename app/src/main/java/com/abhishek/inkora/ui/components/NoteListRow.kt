@@ -60,7 +60,8 @@ fun NoteListRow(
     onToggleSelect: (Long) -> Unit,
     modifier: Modifier = Modifier,
     hideContent: Boolean = false,
-    compact: Boolean = false
+    compact: Boolean = false,
+    query: String = ""
 ) {
     val bgKey = note.backgroundStyle.ifBlank { "cream" }.let {
         when (it) { "white", "gray", "dark", "custom" -> it; else -> "cream" }
@@ -72,6 +73,9 @@ fun NoteListRow(
     val title = remember(note.title, note.content, note.contentFormat) {
         RichText.displayTitle(note.title, note.content, note.contentFormat).ifBlank { "Untitled" }
     }
+    val titleText = rememberHighlighted(title, query)
+    val excerptLine = excerpt.lines().firstOrNull().orEmpty()
+    val excerptText = rememberHighlighted(excerptLine, query)
     Row(
         modifier
             .fillMaxWidth()
@@ -104,7 +108,7 @@ fun NoteListRow(
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    title,
+                    titleText,
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -120,7 +124,7 @@ fun NoteListRow(
             }
             if (!hideContent && excerpt.isNotBlank()) {
                 Text(
-                    excerpt.lines().firstOrNull().orEmpty(),
+                    excerptText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
