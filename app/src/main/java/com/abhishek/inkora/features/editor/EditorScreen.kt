@@ -296,11 +296,7 @@ fun EditorScreen(
                                             doc.lines.getOrNull(li)?.block == BlockKind.CHECK
                                         ) {
                                             down.consume()
-                                            val wasChecked = doc.lines.getOrNull(li)?.checked == true
-                                            haptics.performHapticFeedback(
-                                                if (wasChecked) HapticFeedbackType.ToggleOff
-                                                else HapticFeedbackType.ToggleOn
-                                            )
+                                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             vm.toggleCheck(li)
                                         }
                                     }

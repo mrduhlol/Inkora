@@ -127,7 +127,7 @@ fun InkoraPaperPreview(
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(10.dp).size(18.dp)
                     .clickable {
-                        haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onToggleFavorite(note.id)
                     }
             )
