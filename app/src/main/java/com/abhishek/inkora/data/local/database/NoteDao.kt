@@ -25,14 +25,23 @@ interface NoteDao {
     fun observeInFolder(folderId: Long?): Flow<List<NoteEntity>>
 
     // Offline search via Room; LIKE is enough for V1 scale. FTS can be added later.
-    // Matches title, body and folder name (case-insensitive via LIKE).
+    // Matches title, body, folder name and tag names (case-insensitive via LIKE).
     @Query(
         """SELECT * FROM notes WHERE isDeleted = 0 AND (
         title LIKE '%' || :query || '%' ESCAPE '\' OR content LIKE '%' || :query || '%' ESCAPE '\'
         OR folderId IN (SELECT id FROM folders WHERE name LIKE '%' || :query || '%' ESCAPE '\')
+        OR id IN (SELECT nt.noteId FROM note_tags nt INNER JOIN tags t ON t.id = nt.tagId
+            WHERE t.name LIKE '%' || :query || '%' ESCAPE '\')
         ) ORDER BY updatedAt DESC"""
     )
     fun search(query: String): Flow<List<NoteEntity>>
+
+    @Query(
+        """SELECT * FROM notes WHERE isDeleted = 0 AND isArchived = 0
+        AND id IN (SELECT noteId FROM note_tags WHERE tagId = :tagId)
+        ORDER BY updatedAt DESC"""
+    )
+    fun observeNotesWithTag(tagId: Long): Flow<List<NoteEntity>>
 
     @Query("SELECT * FROM notes WHERE id = :id LIMIT 1")
     suspend fun getById(id: Long): NoteEntity?
