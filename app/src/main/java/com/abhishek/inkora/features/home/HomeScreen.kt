@@ -439,7 +439,8 @@ private fun NoteSectionsGrid(
                 InkoraPaperPreview(
                     note = n, onOpen = onOpen, onToggleFavorite = onToggleFavorite,
                     selected = selection.contains(n.id), selecting = selecting, onToggleSelect = onToggleSelect,
-                    hideContent = hideContent, compact = compact, query = query
+                    hideContent = hideContent, compact = compact, query = query,
+                    modifier = Modifier.animateItemPlacement()
                 )
             }
             item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader("All Notes") }
@@ -448,7 +449,8 @@ private fun NoteSectionsGrid(
             InkoraPaperPreview(
                 note = n, onOpen = onOpen, onToggleFavorite = onToggleFavorite,
                 selected = selection.contains(n.id), selecting = selecting, onToggleSelect = onToggleSelect,
-                hideContent = hideContent, compact = compact, query = query
+                hideContent = hideContent, compact = compact, query = query,
+                modifier = Modifier.animateItemPlacement()
             )
         }
     }
@@ -475,13 +477,15 @@ private fun NoteList(
             item { SectionHeader("Pinned") }
             items(pinned, key = { it.id }) { n ->
                 NoteListRow(n, selection.contains(n.id), selecting, onOpen, onToggleSelect,
-                    hideContent = hideContent, compact = compact, query = query)
+                    hideContent = hideContent, compact = compact, query = query,
+                    modifier = Modifier.animateItemPlacement())
             }
             item { SectionHeader("All Notes") }
         }
         items(notes, key = { it.id }) { n ->
             NoteListRow(n, selection.contains(n.id), selecting, onOpen, onToggleSelect,
-                hideContent = hideContent, compact = compact, query = query)
+                hideContent = hideContent, compact = compact, query = query,
+                modifier = Modifier.animateItemPlacement())
         }
     }
 }
