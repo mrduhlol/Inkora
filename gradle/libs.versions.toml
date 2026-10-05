@@ -10,6 +10,7 @@ room = "2.6.1"
 hilt = "2.51.1"
 ksp = "2.0.20-1.0.25"
 datastore = "1.1.1"
+biometric = "1.1.0"
 coroutines = "1.8.1"
 serialization = "1.7.3"
 testCore = "1.6.1"
@@ -37,6 +38,7 @@ androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = 
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
