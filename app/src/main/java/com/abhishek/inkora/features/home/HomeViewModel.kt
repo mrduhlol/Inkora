@@ -182,6 +182,15 @@ class HomeViewModel @Inject constructor(
 
     suspend fun duplicate(id: Long): Long? = notes.duplicate(id)
 
+    suspend fun createFromTemplate(t: com.abhishek.inkora.features.templates.NoteTemplate): Long =
+        notes.upsert(
+            Note(
+                title = t.title,
+                content = t.encoded(),
+                contentFormat = com.abhishek.inkora.domain.model.RichText.FORMAT
+            )
+        )
+
     // ---------- multi-select ----------
 
     fun toggleSelect(id: Long) {
