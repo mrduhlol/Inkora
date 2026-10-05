@@ -1,6 +1,9 @@
 package com.abhishek.inkora.features.trash
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,9 +11,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -76,21 +80,27 @@ fun TrashScreen(onBack: () -> Unit, vm: TrashViewModel = hiltViewModel()) {
     ) { pad ->
         LazyColumn(Modifier.padding(pad)) {
             items(items, key = { it.id }) { n ->
-                ListItem(
-                    headlineContent = { Text(n.title.ifBlank { "Untitled" }) },
-                    supportingContent = {
-                        Text(
-                            com.abhishek.inkora.domain.model.RichText
-                                .previewText(n.content, n.contentFormat).take(80)
-                        )
-                    },
-                    trailingContent = {
-                        Row {
-                            TextButton(onClick = { vm.restore(n.id) }) { Text("Restore") }
-                            TextButton(onClick = { pendingDelete = n.id }) { Text("Delete") }
-                        }
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    Text(n.title.ifBlank { "Untitled" }, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        com.abhishek.inkora.domain.model.RichText
+                            .previewText(n.content, n.contentFormat).take(80),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    // Actions get a full-width row of their own, so Restore and
+                    // Delete can never overlap — even on narrow screens.
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { vm.restore(n.id) }) { Text("Restore") }
+                        TextButton(onClick = { pendingDelete = n.id }) { Text("Delete") }
                     }
-                )
+                }
+                HorizontalDivider()
             }
             if (items.isEmpty()) {
                 item { Text("Trash is empty.", Modifier.padding(24.dp)) }
