@@ -8,7 +8,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -16,14 +22,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import com.abhishek.inkora.domain.model.RichText
+import com.abhishek.inkora.domain.model.Tag
 
 /**
  * Insert/edit hyperlink. Shows the selected text (read-only context), a URL
@@ -137,10 +146,92 @@ fun TableDialog(
                         normalize()
                         grid.forEach { it.add("") }
                     }) { Text("+ Col") }
-                    OutlinedButton(onClick = {
-                        normalize()
-                        if ((grid.firstOrNull()?.size ?: 0) > 1) grid.forEach { it.removeAt(it.lastIndex) }
-                    }) { Text("− Col") }
+/** Small rows×cols picker shown when inserting a brand-new table. */
+@Composable
+fun TableSizeDialog(
+    onDismiss: () -> Unit,
+    onCreate: (rows: Int, cols: Int) -> Unit
+) {
+    var rows by remember { mutableIntStateOf(2) }
+    var cols by remember { mutableIntStateOf(2) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { onCreate(rows, cols) }) { Text("Insert table") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        title = { Text("New table") },
+        text = {
+            Column {
+                Text("Rows: $rows", style = MaterialTheme.typography.bodyMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    (1..5).forEach { n ->
+                        FilterChip(selected = rows == n, onClick = { rows = n }, label = { Text("$n") })
+                    }
+                }
+                Text("Columns: $cols", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    (1..4).forEach { n ->
+                        FilterChip(selected = cols == n, onClick = { cols = n }, label = { Text("$n") })
+                    }
+                }
+            }
+        }
+    )
+}
+
+/**
+ * Tag manager for one note. Tags are metadata chips — typing here never
+ * touches the note body.
+ */
+@Composable
+fun TagsDialog(
+    tags: List<Tag>,
+    onDismiss: () -> Unit,
+    onAdd: (String) -> Unit,
+    onRemove: (Long) -> Unit
+) {
+    var input by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
+        title = { Text("Tags") },
+        text = {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = input,
+                        onValueChange = { input = it },
+                        label = { Text("New tag") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = {
+                        if (input.isNotBlank()) {
+                            onAdd(input)
+                            input = ""
+                        }
+                    }) { Icon(Icons.Filled.Add, "Add tag") }
+                }
+                if (tags.isEmpty()) {
+                    Text(
+                        "No tags yet. Tags help you find notes from Home.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                } else {
+                    tags.forEach { t ->
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("#${t.name}", Modifier.weight(1f))
+                            IconButton(onClick = { onRemove(t.id) }) {
+                                Icon(Icons.Filled.Close, "Remove tag ${t.name}")
+                            }
+                        }
+                    }
                 }
             }
         }
