@@ -11,7 +11,7 @@
 > No account. No cloud. No tracking. Everything stays on your device.
 
 <p align="center">
-  <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.4.apk">
+  <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.5.apk">
     <img src="https://img.shields.io/badge/Download_Inkora_v1.3_APK-6750A4?style=for-the-badge&logo=android&logoColor=white" alt="Download Inkora v1.3 APK" />
   </a>
 </p>
@@ -21,6 +21,19 @@
 </p>
 
 ---
+
+## New in v1.5
+
+v1.5 adds no big features — it makes everything already in Inkora feel production-quality:
+
+- **Paper, refined** — the folded corner is now a true dog-ear derived from each note's paper color, with a soft contact shadow and crease; card depth is subtler and consistent.
+- **One design language** — centralized tokens for radii, spacing, depth and motion; one accent source across theme and settings.
+- **Search that helps** — one-tap clear button and subtle match highlighting in both grid and list results.
+- **Undo that means it** — trashing or archiving from Home offers UNDO that actually restores; even permanent delete in Trash can be undone (note, tags and attachments come back).
+- **Saving, visible** — a quiet "Saving…" note in the editor top bar while a write is pending.
+- **Feel it** — subtle haptics on favorite, checklist and destructive confirm; gentle item animations on Home.
+- **Lock screen** — authentication prompts immediately instead of waiting for a tap.
+- **Cleaner Settings** — friendly sort names and a live version in About.
 
 ## New in v1.4
 
@@ -96,7 +109,16 @@ v1.1 rebuilds the editor around real rich text and fixes the most-reported v1.0 
 
 **Fully offline.** Create, format, trash, restore, favorite, archive, search and file notes with airplane mode on. Notes survive app kill, force-stop and reboot via Room.
 
-## Inside v1.4
+## Inside v1.5
+
+- [x] Dog-ear fold geometry with paper-derived shading and contact shadow
+- [x] Centralized design tokens (radii, spacing, depth, motion, shades)
+- [x] Search clear button plus subtle match highlighting
+- [x] Real UNDO for trash, archive and permanent delete
+- [x] Save-in-progress indicator in the editor
+- [x] Targeted haptics and Home item animations
+- [x] Immediate app-lock prompt
+- [x] Unit tests: highlight ranges, token shades (full suite green on CI)
 
 - [x] Links with edit/remove/open and URL validation
 - [x] Real tables with structured cell editing and row/col management
@@ -158,7 +180,7 @@ app/src/main/java/com/abhishek/inkora/
 
 **Option A — download (easiest).**
 
-[Download Inkora v1.3 APK](https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.4.apk)
+[Download Inkora v1.3 APK](https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.5.apk)
 
 Then allow installs from unknown apps, open the file, and write your first page.
 
@@ -188,4 +210,4 @@ Issues and pull requests are welcome. Keep the notebook calm: no gradients for f
 
 ---
 
-<p align="center"><b>INKORA v1.4</b> — write quietly. · <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.4">Release notes</a> · <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.4.apk">Download APK</a></p>
+<p align="center"><b>INKORA v1.5</b> — write quietly. · <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.5">Release notes</a> · <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.5.apk">Download APK</a></p>
