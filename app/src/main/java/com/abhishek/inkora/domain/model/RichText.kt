@@ -16,12 +16,18 @@ import kotlinx.serialization.json.Json
  */
 enum class SpanKind { BOLD, ITALIC, UNDERLINE, STRIKE }
 
-enum class BlockKind { PARAGRAPH, BULLET, NUMBERED, CHECK, HEADING1, HEADING2, HEADING3, QUOTE, DIVIDER }
+enum class BlockKind { PARAGRAPH, BULLET, NUMBERED, CHECK, HEADING1, HEADING2, HEADING3, QUOTE, DIVIDER, CODE, TABLE }
 
 enum class ParaAlign { LEFT, CENTER, RIGHT, JUSTIFY }
 
+/** Table cell separator. A visible box-drawing glyph (not markup): it draws the grid. */
+const val TABLE_SEP = " │ "
+
 @Serializable
 data class RichSpan(val start: Int, val end: Int, val kind: SpanKind)
+
+@Serializable
+data class RichLink(val start: Int, val end: Int, val url: String)
 
 @Serializable
 data class RichBlock(val line: Int, val kind: BlockKind, val checked: Boolean = false, val indent: Int = 0)
@@ -34,7 +40,8 @@ data class RichContent(
     val text: String = "",
     val spans: List<RichSpan> = emptyList(),
     val blocks: List<RichBlock> = emptyList(),
-    val aligns: List<RichAlign> = emptyList()
+    val aligns: List<RichAlign> = emptyList(),
+    val links: List<RichLink> = emptyList()
 )
 
 private val RichJson = Json { ignoreUnknownKeys = true }
