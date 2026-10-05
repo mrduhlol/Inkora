@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
@@ -120,10 +121,19 @@ fun HomeScreen(
                 SelectionBar(
                     count = state.selection.size,
                     onClose = vm::clearSelection,
-                    onPin = { vm.pinSelected(true) },
-                    onFavorite = { vm.favoriteSelected(true) },
+                    onPin = { vm.pinSelected(true); scope.launch { snackbar.showSnackbar("Pinned") } },
+                    onFavorite = { vm.favoriteSelected(true); scope.launch { snackbar.showSnackbar("Added to favorites") } },
+                    onArchive = {
+                        val n = state.selection.size
+                        vm.archiveSelected()
+                        scope.launch { snackbar.showSnackbar("Archived $n note(s)") }
+                    },
                     onFolder = { folderDialog = true },
-                    onTrash = vm::trashSelected
+                    onTrash = {
+                        val n = state.selection.size
+                        vm.trashSelected()
+                        scope.launch { snackbar.showSnackbar("Moved $n note(s) to trash") }
+                    }
                 )
             } else {
                 BrandRow(
@@ -349,6 +359,7 @@ private fun SelectionBar(
     onClose: () -> Unit,
     onPin: () -> Unit,
     onFavorite: () -> Unit,
+    onArchive: () -> Unit,
     onFolder: () -> Unit,
     onTrash: () -> Unit
 ) {
@@ -360,6 +371,7 @@ private fun SelectionBar(
         Text("$count selected", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
         IconButton(onClick = onPin) { Icon(Icons.Filled.PushPin, "Pin") }
         IconButton(onClick = onFavorite) { Icon(Icons.Filled.Favorite, "Favorite") }
+        IconButton(onClick = onArchive) { Icon(Icons.Filled.Inventory2, "Archive") }
         IconButton(onClick = onFolder) { Icon(Icons.Filled.Folder, "Move to folder") }
         IconButton(onClick = onTrash) { Icon(Icons.Filled.Delete, "Move to trash") }
     }
