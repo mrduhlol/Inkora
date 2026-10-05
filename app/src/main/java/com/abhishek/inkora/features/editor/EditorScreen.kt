@@ -23,10 +23,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -113,6 +116,10 @@ fun EditorScreen(
     var folderDialog by remember { mutableStateOf(false) }
     var infoDialog by remember { mutableStateOf(false) }
     var showDraw by remember { mutableStateOf(false) }
+    var linkDialog by remember { mutableStateOf(false) }
+    var tableDialog by remember { mutableStateOf(false) }
+    var tableSizeDialog by remember { mutableStateOf(false) }
+    var tagDialog by remember { mutableStateOf(false) }
     var viewer by remember { mutableStateOf<Attachment?>(null) }
     val note = state.note
     val titleFocus = remember { FocusRequester() }
@@ -120,6 +127,9 @@ fun EditorScreen(
     val context = LocalContext.current
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) vm.addImage(uri)
+    }
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) vm.addFile(uri)
     }
 
     if (state.notFound) {
@@ -184,6 +194,21 @@ fun EditorScreen(
                         text = { Text("Draw") },
                         leadingIcon = { Icon(Icons.Filled.Brush, null) },
                         onClick = { menu = false; showDraw = true }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Attach file") },
+                        leadingIcon = { Icon(Icons.Filled.AttachFile, null) },
+                        onClick = { menu = false; filePicker.launch("*/*") }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Tags") },
+                        leadingIcon = { Icon(Icons.Filled.Label, null) },
+                        onClick = { menu = false; tagDialog = true }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (note?.isArchived == true) "Unarchive" else "Archive") },
+                        leadingIcon = { Icon(Icons.Filled.Inventory2, null) },
+                        onClick = { menu = false; vm.toggleArchiveState() }
                     )
                     DropdownMenuItem(
                         text = { Text("Note info") },
@@ -300,6 +325,13 @@ fun EditorScreen(
                 onChecklist = { vm.toggleBlock(BlockKind.CHECK) },
                 onHeading = vm::cycleHeading,
                 onQuote = vm::toggleQuote,
+                onCode = { vm.toggleBlock(BlockKind.CODE) },
+                onLink = { linkDialog = true },
+                onTable = {
+                    if (vm.tableGroup() != null) tableDialog = true else tableSizeDialog = true
+                },
+                onImage = { picker.launch("image/*") },
+                onDraw = { showDraw = true },
                 onDivider = vm::insertDivider,
                 onAlign = vm::cycleAlign,
                 onIndentMore = vm::indentMore,
