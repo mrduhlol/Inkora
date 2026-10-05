@@ -4,6 +4,7 @@ import com.abhishek.inkora.data.export.ExportAttachment
 import com.abhishek.inkora.data.export.ExportFolder
 import com.abhishek.inkora.data.export.ExportNote
 import com.abhishek.inkora.data.export.ExportPayload
+import com.abhishek.inkora.data.export.ExportTag
 import com.abhishek.inkora.data.export.InkoraExport
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -14,11 +15,15 @@ class ExportTest {
     private fun sample() = ExportPayload(
         exportedAt = 123L,
         folders = listOf(ExportFolder(7L, "Work")),
+        tags = listOf(ExportTag(3L, "college")),
         notes = listOf(
-            ExportNote(title = "A", content = "{}", contentFormat = "rich-v1", folderId = 7L, isPinned = true),
+            ExportNote(title = "A", content = "{}", contentFormat = "rich-v1", folderId = 7L, isPinned = true, tagIds = listOf(3L)),
             ExportNote(title = "B", content = "plain")
         ),
-        attachments = listOf(ExportAttachment(0, "img.jpg", "image/jpeg", 10, 10, ""))
+        attachments = listOf(
+            ExportAttachment(0, "img.jpg", "image/jpeg", 10, 10, ""),
+            ExportAttachment(1, "doc.pdf", "application/pdf", 0, 0, "", kind = "file", sizeBytes = 42L)
+        )
     )
 
     @Test fun roundTrip_preservesEverything() {
@@ -27,7 +32,17 @@ class ExportTest {
         assertEquals(7L, back.folders.single().id)
         assertEquals(true, back.notes[0].isPinned)
         assertEquals(7L, back.notes[0].folderId)
-        assertEquals(0, back.attachments.single().noteIndex)
+        assertEquals(0, back.attachments.first().noteIndex)
+        assertEquals(listOf(3L), back.notes[0].tagIds)
+        assertEquals("college", back.tags.single().name)
+        assertEquals("file", back.attachments.last().kind)
+    }
+
+    @Test fun v1Backup_stillImports() {
+        val v1 = """{"app":"inkora","format":1,"exportedAt":1,"folders":[],"notes":[{"title":"Old"}],"attachments":[]}"""
+        val back = InkoraExport.decode(v1).getOrThrow()
+        assertEquals("Old", back.notes.single().title)
+        assertTrue(back.tags.isEmpty())
     }
 
     @Test fun garbage_isFailureNotCrash() {
