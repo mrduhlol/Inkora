@@ -30,6 +30,6 @@ class SearchHighlightTest {
     }
 
     @Test fun unicodeSafe() {
-        assertEquals(listOf(0 until 2), highlightRanges("Semiconductor…", "semi"))
+        assertEquals(listOf(0 until 4), highlightRanges("Semiconductor…", "semi"))
     }
 }
