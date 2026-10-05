@@ -393,10 +393,15 @@ fun EditorScreen(
         }
 
         if (showDraw) {
-            DrawDialog(
-                onDismiss = { showDraw = false },
-                onSave = { png -> vm.addDrawing(png); showDraw = false }
-            )
+            Dialog(
+                onDismissRequest = { showDraw = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                DrawDialog(
+                    onDismiss = { showDraw = false },
+                    onSave = { png -> vm.addDrawing(png); showDraw = false }
+                )
+            }
         }
 
         if (styleSheet) {            ModalBottomSheet(onDismissRequest = { styleSheet = false }, sheetState = rememberModalBottomSheetState()) {
