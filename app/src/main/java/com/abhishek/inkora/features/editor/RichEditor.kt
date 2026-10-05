@@ -538,6 +538,116 @@ data class RichDoc(
         return copy(lines = lines.mapIndexed { i, l -> if (i == line) l.copy(checked = !l.checked) else l })
     }
 
+    // ---------- links (rendered selection → line-relative) ----------
+
+    private fun relRange(rendered: String, lineIdx: Int, s: Int, e: Int): Pair<Int, Int>? {
+        val line = lines.getOrNull(lineIdx) ?: return null
+        val ls = renderedLineStart(rendered, lineIdx)
+        val pl = linePrefixLen(line, lineIdx)
+        val rs = (s - ls - pl).coerceIn(0, line.text.length)
+        val re = (e - ls - pl).coerceIn(0, line.text.length)
+        return if (rs < re) rs to re else null
+    }
+
+    /** Attach [url] to the current selection. Collapsed selections are a no-op. */
+    fun setLink(url: String): RichDoc {
+        val (s, e) = selection.min to selection.max
+        if (s >= e) return this
+        val r = rendered()
+        val updated = lines.mapIndexed { li, line ->
+            val ls = renderedLineStart(r, li)
+            val lineEnd = ls + linePrefixLen(line, li) + line.text.length
+            if (e <= ls || s >= lineEnd) return@mapIndexed line
+            val (rs, re) = relRange(r, li, maxOf(s, ls), minOf(e, lineEnd)) ?: return@mapIndexed line
+            val kept = line.links.filterNot { it.end > rs && it.start < re }.toMutableList()
+            kept.add(RichLink(rs, re, url))
+            line.copy(links = kept.sortedWith(compareBy({ it.start }, { it.end })))
+        }
+        return copy(lines = updated)
+    }
+
+    fun removeLink(): RichDoc {
+        val (s, e) = selection.min to selection.max
+        if (s >= e) return this
+        val r = rendered()
+        val updated = lines.mapIndexed { li, line ->
+            val ls = renderedLineStart(r, li)
+            val lineEnd = ls + linePrefixLen(line, li) + line.text.length
+            if (e <= ls || s >= lineEnd) return@mapIndexed line
+            val (rs, re) = relRange(r, li, maxOf(s, ls), minOf(e, lineEnd)) ?: return@mapIndexed line
+            line.copy(links = line.links.filterNot { it.end > rs && it.start < re })
+        }
+        return copy(lines = updated)
+    }
+
+    /** Link under the collapsed cursor or fully inside the selection, if any. */
+    fun linkAtSelection(): RichLink? {
+        val r = rendered()
+        val (s, e) = selection.min to selection.max
+        if (s < e) {
+            val li = renderedLineOf(r, s)
+            val line = lines.getOrNull(li) ?: return null
+            val (rs, re) = relRange(r, li, s, e) ?: return null
+            return line.links.firstOrNull { it.start <= rs && it.end >= re }
+        }
+        val li = renderedLineOf(r, s)
+        val line = lines.getOrNull(li) ?: return null
+        val ls = renderedLineStart(r, li)
+        val rel = (s - ls - linePrefixLen(line, li)).coerceIn(0, line.text.length)
+        return line.links.firstOrNull { it.start <= rel && rel < it.end }
+    }
+
+    // ---------- tables ----------
+
+    /** Consecutive TABLE lines around the cursor, or null outside tables. */
+    fun tableGroupAtCursor(): IntRange? {
+        val li = lineIndexAtRendered(selection.min)
+        if (lines.getOrNull(li)?.block != BlockKind.TABLE) return null
+        var s = li
+        var e = li
+        while (s - 1 >= 0 && lines[s - 1].block == BlockKind.TABLE) s--
+        while (e + 1 < lines.size && lines[e + 1].block == BlockKind.TABLE) e++
+        return s..e
+    }
+
+    /** Insert a rows×cols table at the cursor (replacing a blank line when possible). */
+    fun insertTable(rows: Int, cols: Int): RichDoc {
+        val r = rows.coerceIn(1, 10)
+        val c = cols.coerceIn(1, 6)
+        val li = lineIndexAtRendered(selection.min)
+        val updated = lines.toMutableList()
+        val fresh = List(r) { EditLine(RichText.buildTableRow(List(c) { "" }), block = BlockKind.TABLE) }
+        if ((lines.getOrNull(li)?.text.isNullOrBlank()) && lines.getOrNull(li)?.block == BlockKind.PARAGRAPH) {
+            updated.removeAt(li)
+            updated.addAll(li, fresh)
+        } else {
+            updated.addAll(li + 1, fresh)
+        }
+        val withLines = copy(lines = updated)
+        val nr = withLines.rendered()
+        val target = (li + 1).coerceAtMost(withLines.lines.size - 1)
+        return withLines.copy(selection = TextRange(withLines.renderedLineStart(nr, target)))
+    }
+
+    /** Replace a table group's cells; row/col counts may change freely. */
+    fun setTableCells(group: IntRange, grid: List<List<String>>): RichDoc {
+        if (grid.isEmpty()) return this
+        val cols = grid.maxOf { it.size }.coerceAtLeast(1)
+        val rows = grid.map { row -> RichText.buildTableRow(List(cols) { i -> row.getOrNull(i).orEmpty() }) }
+        val updated = lines.toMutableList()
+        val first = group.first.coerceIn(0, updated.size)
+        val lastExcl = (group.last + 1).coerceIn(first, updated.size)
+        repeat(lastExcl - first) { updated.removeAt(first) }
+        rows.forEachIndexed { k, text ->
+            updated.add(first + k, EditLine(text, block = BlockKind.TABLE))
+        }
+        return copy(lines = updated.ifEmpty { listOf(EditLine()) })
+    }
+
+    fun tableCells(group: IntRange): List<List<String>> =
+        group.map { lines.getOrNull(it)?.takeIf { l -> l.block == BlockKind.TABLE }?.text.orEmpty() }
+            .map { RichText.tableCells(it) }
+
     private fun selectedLines(): IntRange {
         val r = rendered()
         return RichText.linesInSelection(r, selection.min, selection.max)
