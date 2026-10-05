@@ -156,6 +156,13 @@ fun HomeScreen(
                 onActiveChange = {},
                 placeholder = { Text("Search notes…") },
                 leadingIcon = { Icon(Icons.Filled.Search, null) },
+                trailingIcon = if (state.query.isNotEmpty()) {
+                    {
+                        IconButton(onClick = { vm.onQueryChange("") }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Clear search")
+                        }
+                    }
+                } else null,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
             ) {}
             ControlsRow(
@@ -190,6 +197,7 @@ fun HomeScreen(
                     selecting = state.selecting,
                     hideContent = state.hidePreviews,
                     compact = state.density == CardDensity.COMPACT,
+                    query = state.query,
                     onOpen = onOpenNote,
                     onToggleSelect = vm::toggleSelect
                 )
@@ -201,6 +209,7 @@ fun HomeScreen(
                     gridColumns = state.gridColumns,
                     hideContent = state.hidePreviews,
                     compact = state.density == CardDensity.COMPACT,
+                    query = state.query,
                     onOpen = onOpenNote,
                     onToggleFavorite = { id ->
                         (state.pinned + state.notes).firstOrNull { it.id == id }?.let {
@@ -398,6 +407,7 @@ private fun NoteSectionsGrid(
     gridColumns: Int,
     hideContent: Boolean,
     compact: Boolean,
+    query: String,
     onOpen: (Long) -> Unit,
     onToggleFavorite: (Long) -> Unit,
     onToggleSelect: (Long) -> Unit
@@ -422,7 +432,7 @@ private fun NoteSectionsGrid(
                 InkoraPaperPreview(
                     note = n, onOpen = onOpen, onToggleFavorite = onToggleFavorite,
                     selected = selection.contains(n.id), selecting = selecting, onToggleSelect = onToggleSelect,
-                    hideContent = hideContent, compact = compact
+                    hideContent = hideContent, compact = compact, query = query
                 )
             }
             item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader("All Notes") }
@@ -431,7 +441,7 @@ private fun NoteSectionsGrid(
             InkoraPaperPreview(
                 note = n, onOpen = onOpen, onToggleFavorite = onToggleFavorite,
                 selected = selection.contains(n.id), selecting = selecting, onToggleSelect = onToggleSelect,
-                hideContent = hideContent, compact = compact
+                hideContent = hideContent, compact = compact, query = query
             )
         }
     }
@@ -445,6 +455,7 @@ private fun NoteList(
     selecting: Boolean,
     hideContent: Boolean,
     compact: Boolean,
+    query: String,
     onOpen: (Long) -> Unit,
     onToggleSelect: (Long) -> Unit
 ) {
@@ -457,13 +468,13 @@ private fun NoteList(
             item { SectionHeader("Pinned") }
             items(pinned, key = { it.id }) { n ->
                 NoteListRow(n, selection.contains(n.id), selecting, onOpen, onToggleSelect,
-                    hideContent = hideContent, compact = compact)
+                    hideContent = hideContent, compact = compact, query = query)
             }
             item { SectionHeader("All Notes") }
         }
         items(notes, key = { it.id }) { n ->
             NoteListRow(n, selection.contains(n.id), selecting, onOpen, onToggleSelect,
-                hideContent = hideContent, compact = compact)
+                hideContent = hideContent, compact = compact, query = query)
         }
     }
 }
