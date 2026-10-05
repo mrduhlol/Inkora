@@ -147,10 +147,39 @@ class EditorViewModel @Inject constructor(
 
     fun cycleHeading() = structureOp { it.cycleHeading() }
     fun toggleQuote() = structureOp { it.toggleQuote() }
+    fun toggleCode() = structureOp { it.toggleBlock(BlockKind.CODE) }
     fun insertDivider() = structureOp { it.insertDivider() }
     fun cycleAlign() = structureOp { it.cycleAlign() }
     fun indentMore() = structureOp { it.indentMore() }
     fun indentLess() = structureOp { it.indentLess() }
+
+    // ---------- links (each is one undo step) ----------
+
+    /** Attach a URL to the current selection. Returns false when unusable. */
+    fun setLink(rawUrl: String): Boolean {
+        val url = RichText.normalizeUrl(rawUrl) ?: return false
+        pushUndo()
+        _state.value = _state.value.copy(doc = _state.value.doc.setLink(url))
+        refreshUndo()
+        scheduleSave()
+        return true
+    }
+
+    fun removeLink() = structureOp { it.removeLink() }
+
+    fun linkAtSelection(): com.abhishek.inkora.domain.model.RichLink? =
+        _state.value.doc.linkAtSelection()
+
+    // ---------- tables (each is one undo step) ----------
+
+    fun insertTable(rows: Int, cols: Int) = structureOp { it.insertTable(rows, cols) }
+
+    fun tableGroup(): IntRange? = _state.value.doc.tableGroupAtCursor()
+
+    fun tableCells(group: IntRange): List<List<String>> = _state.value.doc.tableCells(group)
+
+    fun setTableCells(group: IntRange, grid: List<List<String>>) =
+        structureOp { it.setTableCells(group, grid) }
 
     private fun structureOp(op: (RichDoc) -> RichDoc) {
         pushUndo()
