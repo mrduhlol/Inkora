@@ -194,6 +194,19 @@ object RichText {
                 .map { if (it.line > line) it.copy(line = it.line + 1) else it }
                 .sortedBy { it.line }
         }
+        if (cur == BlockKind.CODE) {
+            // Code continues line-by-line; an empty code line exits to paragraph.
+            if (lineTextIsBlank) {
+                return c.blocks.filter { it.line != line }
+                    .map { if (it.line > line) it.copy(line = it.line + 1) else it }
+                    .sortedBy { it.line }
+            }
+            return c.blocks.flatMap {
+                if (it.line == line) listOf(it, RichBlock(line + 1, BlockKind.CODE))
+                else if (it.line > line) listOf(it.copy(line = it.line + 1))
+                else listOf(it)
+            }.take(newLineCount).sortedBy { it.line }
+        }
         if (lineTextIsBlank) {
             return c.blocks.filter { it.line != line }
                 .map { if (it.line > line) it.copy(line = it.line + 1) else it }
@@ -256,6 +269,8 @@ object RichText {
                 BlockKind.CHECK -> (if (b.checked) "☑ " else "☐ ") + indented
                 BlockKind.QUOTE -> "“$l”"
                 BlockKind.DIVIDER -> "──────────"
+                BlockKind.CODE -> l
+                BlockKind.TABLE -> l
                 else -> indented
             }
         }.joinToString("\n").also { }
