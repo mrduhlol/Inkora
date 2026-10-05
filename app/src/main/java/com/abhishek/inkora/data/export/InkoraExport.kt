@@ -8,6 +8,9 @@ import kotlinx.serialization.json.Json
 data class ExportFolder(val id: Long, val name: String)
 
 @Serializable
+data class ExportTag(val id: Long, val name: String)
+
+@Serializable
 data class ExportNote(
     val title: String = "",
     val content: String = "",
@@ -21,7 +24,9 @@ data class ExportNote(
     val backgroundStyle: String = "blank",
     val backgroundColor: String? = null,
     val textColor: String? = null,
-    val pageStyle: String = "blank"
+    val pageStyle: String = "blank",
+    /** Export-format tag ids, remapped on import. */
+    val tagIds: List<Long> = emptyList()
 )
 
 @Serializable
@@ -32,15 +37,19 @@ data class ExportAttachment(
     val width: Int,
     val height: Int,
     /** Base64 JPEG bytes, capped at write time. Empty = metadata only. */
-    val dataBase64: String = ""
+    val dataBase64: String = "",
+    /** "image" or "file". Defaults to image so v1 backups still restore. */
+    val kind: String = "image",
+    val sizeBytes: Long = 0L
 )
 
 @Serializable
 data class ExportPayload(
     val app: String = "inkora",
-    val format: Int = 1,
+    val format: Int = 2,
     val exportedAt: Long = 0L,
     val folders: List<ExportFolder> = emptyList(),
+    val tags: List<ExportTag> = emptyList(),
     val notes: List<ExportNote> = emptyList(),
     val attachments: List<ExportAttachment> = emptyList()
 )
@@ -60,7 +69,7 @@ object InkoraExport {
         if (raw.length > MAX_TOTAL_BYTES + 1024 * 1024) throw IllegalArgumentException("Export file too large")
         val p = ExportJson.decodeFromString(ExportPayload.serializer(), raw)
         require(p.app == "inkora") { "Not an Inkora file" }
-        require(p.format == 1) { "Unsupported export version ${p.format}" }
+        require(p.format == 1 || p.format == 2) { "Unsupported export version ${p.format}" }
         require(p.notes.size <= MAX_NOTES) { "Too many notes (${p.notes.size})" }
         require(p.attachments.size <= MAX_ATTACHMENTS) { "Too many attachments" }
         p
