@@ -119,6 +119,7 @@ class DataRepository @Inject constructor(
         }
         var notes = 0
         var folders = 0
+        var tags = 0
         var images = 0
         var skipped = 0
         val folderRemap = mutableMapOf<Long, Long>()
@@ -127,6 +128,18 @@ class DataRepository @Inject constructor(
                 val newId = folderDao.upsert(FolderEntity(name = f.name.take(120)))
                 folderRemap[f.id] = newId
                 folders++
+            }.getOrElse { skipped++ }
+        }
+        val tagRemap = mutableMapOf<Long, Long>()
+        payload.tags.forEach { t ->
+            runCatching {
+                val clean = t.name.trim().lowercase().take(40)
+                require(clean.isNotBlank())
+                val existing = tagDao.findIdByName(clean)
+                val newId = existing ?: tagDao.insertTag(TagEntity(name = clean)).takeIf { it != -1L }
+                    ?: tagDao.findIdByName(clean)!!
+                tagRemap[t.id] = newId
+                tags++
             }.getOrElse { skipped++ }
         }
         val newIds = mutableListOf<Long>()
@@ -150,6 +163,13 @@ class DataRepository @Inject constructor(
                         pageStyle = n.pageStyle
                     )
                 )
+                n.tagIds.mapNotNull { tagRemap[it] }.forEach { tagId ->
+                    runCatching {
+                        tagDao.link(
+                            com.abhishek.inkora.data.local.database.entities.NoteTagCrossRef(id, tagId)
+                        )
+                    }
+                }
                 newIds.add(id)
                 notes++
             }.getOrElse { skipped++ }
@@ -159,7 +179,11 @@ class DataRepository @Inject constructor(
             if (a.dataBase64.isBlank()) { skipped++; return@forEach }
             runCatching {
                 val raw = Base64.decode(a.dataBase64, Base64.DEFAULT)
-                attachments.storeBytes(target, a.fileName.takeLast(60), a.mimeType, raw)
+                if (a.kind == "file") {
+                    attachments.storeFileBytes(target, a.fileName.takeLast(60), a.mimeType, raw)
+                } else {
+                    attachments.storeBytes(target, a.fileName.takeLast(60), a.mimeType, raw)
+                }
                 images++
             }.getOrElse { skipped++ }
         }
