@@ -48,6 +48,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -124,15 +125,21 @@ fun HomeScreen(
                     onPin = { vm.pinSelected(true); scope.launch { snackbar.showSnackbar("Pinned") } },
                     onFavorite = { vm.favoriteSelected(true); scope.launch { snackbar.showSnackbar("Added to favorites") } },
                     onArchive = {
-                        val n = state.selection.size
-                        vm.archiveSelected()
-                        scope.launch { snackbar.showSnackbar("Archived $n note(s)") }
+                        val n = vm.archiveSelected()
+                        scope.launch {
+                            if (snackbar.showSnackbar("Archived $n note(s)", actionLabel = "UNDO") ==
+                                SnackbarResult.ActionPerformed
+                            ) vm.undoArchive()
+                        }
                     },
                     onFolder = { folderDialog = true },
                     onTrash = {
-                        val n = state.selection.size
-                        vm.trashSelected()
-                        scope.launch { snackbar.showSnackbar("Moved $n note(s) to trash") }
+                        val n = vm.trashSelected()
+                        scope.launch {
+                            if (snackbar.showSnackbar("Moved $n note(s) to trash", actionLabel = "UNDO") ==
+                                SnackbarResult.ActionPerformed
+                            ) vm.undoTrash()
+                        }
                     }
                 )
             } else {
