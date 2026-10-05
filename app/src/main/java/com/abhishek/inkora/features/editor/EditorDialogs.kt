@@ -146,6 +146,16 @@ fun TableDialog(
                         normalize()
                         grid.forEach { it.add("") }
                     }) { Text("+ Col") }
+                    OutlinedButton(onClick = {
+                        normalize()
+                        if ((grid.firstOrNull()?.size ?: 0) > 1) grid.forEach { it.removeAt(it.lastIndex) }
+                    }) { Text("− Col") }
+                }
+            }
+        }
+    )
+}
+
 /** Small rows×cols picker shown when inserting a brand-new table. */
 @Composable
 fun TableSizeDialog(
