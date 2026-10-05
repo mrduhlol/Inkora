@@ -15,6 +15,7 @@ import com.abhishek.inkora.domain.model.RichText
 import com.abhishek.inkora.domain.model.SpanKind
 import com.abhishek.inkora.domain.repository.FolderRepository
 import com.abhishek.inkora.domain.repository.NoteRepository
+import com.abhishek.inkora.domain.repository.TagRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -51,6 +52,7 @@ class EditorViewModel @Inject constructor(
     private val notes: NoteRepository,
     private val settings: SettingsRepository,
     private val folders: FolderRepository,
+    private val tags: TagRepository,
     private val attachmentsRepo: AttachmentRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -58,6 +60,8 @@ class EditorViewModel @Inject constructor(
     private val _state = MutableStateFlow(EditorUiState())
     val state: StateFlow<EditorUiState> = _state
     val allFolders = folders.observeFolders()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val noteTags = tags.observeTagsForNote(noteId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val attachments = attachmentsRepo.observe(noteId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -227,6 +231,20 @@ class EditorViewModel @Inject constructor(
             notes.moveToFolder(n.id, folderId)
             _state.value = _state.value.copy(note = n.copy(folderId = folderId))
         }
+    }
+
+    // ---------- tags (metadata, never body syntax) ----------
+
+    fun addTag(rawName: String) {
+        viewModelScope.launch {
+            runCatching { tags.attach(noteId, rawName) }.onFailure {
+                _state.value = _state.value.copy(saveError = "Couldn't add that tag")
+            }
+        }
+    }
+
+    fun removeTag(tagId: Long) {
+        viewModelScope.launch { tags.detach(noteId, tagId) }
     }
 
     fun trash(onDone: () -> Unit) {
