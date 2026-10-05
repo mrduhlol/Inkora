@@ -2,10 +2,13 @@ package com.abhishek.inkora.features.editor
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.ParagraphStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -139,7 +142,11 @@ data class RichDoc(
         return indent + kind
     }
 
-    fun render(prefixColor: Color, accent: Color = prefixColor): AnnotatedString {
+    fun render(
+        prefixColor: Color,
+        accent: Color = prefixColor,
+        codeBg: Color = prefixColor.copy(alpha = 0.14f)
+    ): AnnotatedString {
         var number = 0
         return buildAnnotatedString {
             lines.forEachIndexed { i, l ->
@@ -167,9 +174,24 @@ data class RichDoc(
                     }
                     val base = length
                     append(l.text)
-                    lineStyleFor(l)?.let { addStyle(it, base, base + l.text.length) }
+                    lineStyleFor(l, codeBg)?.let { addStyle(it, base, base + l.text.length) }
                     l.spans.forEach { s ->
                         addStyle(styleFor(s.kind), base + s.start, base + s.end)
+                    }
+                    l.links.forEach { link ->
+                        addLink(
+                            LinkAnnotation.Url(
+                                link.url,
+                                TextLinkStyles(
+                                    style = SpanStyle(
+                                        color = accent,
+                                        textDecoration = TextDecoration.Underline
+                                    )
+                                )
+                            ),
+                            base + link.start,
+                            base + link.end
+                        )
                     }
                 }
                 if (l.align != ParaAlign.LEFT) {
@@ -179,11 +201,13 @@ data class RichDoc(
         }
     }
 
-    private fun lineStyleFor(l: EditLine): SpanStyle? = when (l.block) {
+    private fun lineStyleFor(l: EditLine, codeBg: Color): SpanStyle? = when (l.block) {
         BlockKind.HEADING1 -> SpanStyle(fontWeight = FontWeight.Bold, fontSize = 22.sp)
         BlockKind.HEADING2 -> SpanStyle(fontWeight = FontWeight.Bold, fontSize = 19.sp)
         BlockKind.HEADING3 -> SpanStyle(fontWeight = FontWeight.Bold, fontSize = 17.sp)
         BlockKind.QUOTE -> SpanStyle(fontStyle = FontStyle.Italic)
+        BlockKind.CODE -> SpanStyle(fontFamily = FontFamily.Monospace, background = codeBg)
+        BlockKind.TABLE -> SpanStyle(fontFamily = FontFamily.Monospace, background = codeBg)
         else -> null
     }
 
