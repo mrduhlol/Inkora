@@ -11,6 +11,7 @@ import com.abhishek.inkora.domain.model.SortOrder
 import com.abhishek.inkora.domain.repository.FolderRepository
 import com.abhishek.inkora.domain.repository.NoteRepository
 import com.abhishek.inkora.domain.repository.TagRepository
+import com.abhishek.inkora.features.templates.encoded
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
