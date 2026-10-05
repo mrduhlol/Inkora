@@ -87,6 +87,7 @@ import com.abhishek.inkora.domain.model.PaperBackground
 import com.abhishek.inkora.domain.model.ParaAlign
 import com.abhishek.inkora.domain.model.SpanKind
 import com.abhishek.inkora.features.draw.DrawDialog
+import com.abhishek.inkora.ui.components.FileCard
 import com.abhishek.inkora.ui.components.FormattingToolbar
 import com.abhishek.inkora.ui.components.InkoraPaperSurface
 import com.abhishek.inkora.ui.components.InkoraTopBar
@@ -309,11 +310,35 @@ fun EditorScreen(
             // IME insets (zero extra space when the keyboard is dismissed).
             if (attachments.isNotEmpty()) {
                 AttachmentStrip(
-                    attachments = attachments,
+                    attachments = attachments.filter { it.kind != "file" },
                     onOpen = { viewer = it },
                     onRemove = { vm.removeImage(it) },
                     onAdd = { picker.launch("image/*") }
                 )
+            }
+            val files = remember(attachments) { attachments.filter { it.kind == "file" } }
+            files.forEach { f ->
+                var fileConfirm by remember(f.id) { mutableStateOf(false) }
+                FileCard(
+                    attachment = f,
+                    onOpen = {
+                        val opened = openAttachment(context, f)
+                        if (!opened) scope.launch { snackbar.showSnackbar("No app can open this file") }
+                    },
+                    onRemove = { fileConfirm = true },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+                if (fileConfirm) {
+                    AlertDialog(
+                        onDismissRequest = { fileConfirm = false },
+                        confirmButton = {
+                            TextButton(onClick = { vm.removeImage(f.id); fileConfirm = false }) { Text("Remove") }
+                        },
+                        dismissButton = { TextButton(onClick = { fileConfirm = false }) { Text("Keep") } },
+                        title = { Text("Remove attachment?") },
+                        text = { Text("${f.fileName} will be deleted from this device.") }
+                    )
+                }
             }
             FormattingToolbar(
                 active = doc.activeKinds(),
@@ -530,6 +555,22 @@ private fun InfoRow(label: String, value: String) {
 private fun formatDate(millis: Long): String =
     java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
         .format(java.util.Date(millis))
+
+/** Open a generic attachment with an external viewer via FileProvider. */
+private fun openAttachment(context: android.content.Context, a: Attachment): Boolean {
+    val file = a.file ?: return false
+    return runCatching {
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context, "${context.packageName}.files", file
+        )
+        val view = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, a.mimeType)
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(android.content.Intent.createChooser(view, "Open ${a.fileName}"))
+        true
+    }.getOrDefault(false)
+}
 
 /** Swipeable full-screen gallery over a note's images. Simple, no zoom engine. */
 @OptIn(ExperimentalFoundationApi::class)
