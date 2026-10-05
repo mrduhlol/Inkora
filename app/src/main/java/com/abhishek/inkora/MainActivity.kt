@@ -1,10 +1,12 @@
 package com.abhishek.inkora
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
@@ -15,6 +17,7 @@ import com.abhishek.inkora.features.editor.EditorScreen
 import com.abhishek.inkora.features.favorites.FavoritesScreen
 import com.abhishek.inkora.features.folders.FoldersScreen
 import com.abhishek.inkora.features.home.HomeScreen
+import com.abhishek.inkora.features.lock.AppLockGate
 import com.abhishek.inkora.features.settings.SettingsScreen
 import com.abhishek.inkora.features.settings.SettingsViewModel
 import com.abhishek.inkora.features.trash.TrashScreen
@@ -23,7 +26,7 @@ import com.abhishek.inkora.ui.theme.InkoraTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -32,9 +35,18 @@ class MainActivity : ComponentActivity() {
             val s by settingsVm.settings.collectAsStateWithLifecycle(
                 initialValue = com.abhishek.inkora.data.repository.InkoraSettings()
             )
+            // Optional screenshot/screen-record blocking. Off by default.
+            LaunchedEffect(s.secureScreenshots) {
+                if (s.secureScreenshots) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                }
+            }
             InkoraTheme(appTheme = s.theme, accent = s.accent, dynamicColor = s.dynamicColor) {
-                val nav = rememberNavController()
-                NavHost(nav, startDestination = InkoraRoute.Home) {
+                AppLockGate(enabled = s.appLock, activity = this) {
+                    val nav = rememberNavController()
+                    NavHost(nav, startDestination = InkoraRoute.Home) {
                     composable<InkoraRoute.Home> {
                         HomeScreen(
                             onOpenNote = { nav.navigate(InkoraRoute.Editor(it)) },
@@ -62,6 +74,7 @@ class MainActivity : ComponentActivity() {
                     }
                     composable<InkoraRoute.Archive> {
                         ArchiveScreen(onBack = { nav.popBackStack() }, onOpen = { nav.navigate(InkoraRoute.Editor(it)) })
+                    }
                     }
                 }
             }
