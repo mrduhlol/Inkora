@@ -97,4 +97,21 @@ class NotePersistenceTest {
         assertEquals(false, db.noteDao().getById(id)!!.isPinned)
         assertTrue(db.attachmentDao().listForNote(id).isEmpty())
     }
+
+    @Test fun tags_attach_search_detach_delete() = runTest {
+        val repo = com.abhishek.inkora.data.repository.TagRepositoryImpl(db.tagDao())
+        val id = db.noteDao().upsert(NoteEntity(title = "Thermo", content = "entropy"))
+        repo.attach(id, "Physics")
+        repo.attach(id, "physics") // same normalized tag, no duplicate
+        assertEquals(1, db.tagDao().listTags().size)
+        assertEquals("physics", db.tagDao().listTagsForNote(id).single().name)
+        assertTrue(db.noteDao().search("phys").first().any { it.id == id })
+        assertTrue(db.noteDao().observeNotesWithTag(db.tagDao().listTags().single().id).first().any { it.id == id })
+        repo.detach(id, db.tagDao().listTags().single().id)
+        assertTrue(db.tagDao().listTagsForNote(id).isEmpty())
+        // Deleting a tag never deletes notes.
+        val tagId = repo.attach(id, "temp")
+        repo.deleteTag(tagId)
+        assertNotNull(db.noteDao().getById(id))
+    }
 }
