@@ -114,7 +114,7 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = hiltViewModel()) 
                     androidx.compose.material3.FilterChip(
                         selected = it == s.sortOrder,
                         onClick = { vm.setSort(it) },
-                        label = { Text(it.key) },
+                        label = { Text(sortLabel(it)) },
                         modifier = Modifier.padding(end = 8.dp)
                     )
                 }
@@ -202,6 +202,13 @@ private fun formatBytes(b: Long): String = when {
 @Composable
 private fun Section(title: String) {
     Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+}
+
+private fun sortLabel(o: SortOrder): String = when (o) {
+    SortOrder.UPDATED_DESC -> "Recently updated"
+    SortOrder.CREATED_DESC -> "Recently created"
+    SortOrder.TITLE_ASC -> "Title A–Z"
+    SortOrder.TITLE_DESC -> "Title Z–A"
 }
 
 @Composable
