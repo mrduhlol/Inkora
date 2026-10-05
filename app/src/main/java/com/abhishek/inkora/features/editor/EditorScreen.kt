@@ -182,6 +182,8 @@ fun EditorScreen(
                 title = state.title,
                 isFavorite = note?.isFavorite == true,
                 menuExpanded = menu,
+                // Unobtrusive save state: present only while a write is pending.
+                subtitle = if (state.isSaving) "Saving…" else null,
                 onBack = { vm.flushNow(onBack) },
                 onToggleFavorite = { vm.toggleFavorite() },
                 onMore = { menu = true },
