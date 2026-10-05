@@ -269,6 +269,15 @@ data class RichDoc(
         }
     }
 
+    private fun remapLinks(old: EditLine?, newText: String): List<RichLink> {
+        if (old == null) return emptyList()
+        return old.links.mapNotNull {
+            val s = it.start.coerceIn(0, newText.length)
+            val e = it.end.coerceIn(0, newText.length)
+            if (s < e) RichLink(s, e, it.url) else null
+        }
+    }
+
     private fun firstDiff(a: String, b: String): Int {
         val n = minOf(a.length, b.length)
         for (i in 0 until n) if (a[i] != b[i]) return i
@@ -317,7 +326,7 @@ data class RichDoc(
                         selection = TextRange(withFixed.renderedLineStart(withFixed.rendered(), srcIdx))
                     )
                 } else {
-                    parsed[newIdx] = parsed[newIdx].copy(block = src.block, checked = false, spans = emptyList())
+                    parsed[newIdx] = parsed[newIdx].copy(block = src.block, checked = false, spans = emptyList(), links = emptyList())
                     val withFixed = copy(lines = parsed)
                     val r = withFixed.rendered()
                     val ls = withFixed.renderedLineStart(r, newIdx)
@@ -388,7 +397,7 @@ data class RichDoc(
             else EditLine(raw.trim(), emptyList())
         }
         if (old.block == BlockKind.PARAGRAPH && old.indent == 0) {
-            return EditLine(raw, remapSpans(old, raw), align = old.align)
+            return EditLine(raw, remapSpans(old, raw), remapLinks(old, raw), align = old.align)
         }
         var text = raw
         val ind = indentStr(old.indent)
@@ -414,7 +423,7 @@ data class RichDoc(
                 text = text.replaceFirst(it, "")
             }
         }
-        return EditLine(text, remapSpans(old, text), old.block, old.checked, old.indent, old.align)
+        return EditLine(text, remapSpans(old, text), remapLinks(old, text), old.block, old.checked, old.indent, old.align)
     }
 
     private fun onInputGeneric(newRendered: String, newSel: TextRange): RichDoc {
