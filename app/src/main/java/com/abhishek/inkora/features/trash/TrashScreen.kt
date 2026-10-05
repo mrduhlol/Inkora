@@ -26,6 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -109,6 +111,7 @@ fun TrashScreen(onBack: () -> Unit, vm: TrashViewModel = hiltViewModel()) {
     var confirmEmpty by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
@@ -158,6 +161,7 @@ fun TrashScreen(onBack: () -> Unit, vm: TrashViewModel = hiltViewModel()) {
                 confirmButton = {
                     TextButton(onClick = {
                         pendingDelete = null
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         vm.deleteForever(doomed) { undoable ->
                             scope.launch {
                                 if (undoable && snackbar.showSnackbar("Note deleted", actionLabel = "UNDO") ==
