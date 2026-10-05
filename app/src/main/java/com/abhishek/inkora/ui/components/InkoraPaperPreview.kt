@@ -46,7 +46,9 @@ fun InkoraPaperPreview(
     modifier: Modifier = Modifier,
     selected: Boolean = false,
     selecting: Boolean = false,
-    onToggleSelect: ((Long) -> Unit)? = null
+    onToggleSelect: ((Long) -> Unit)? = null,
+    hideContent: Boolean = false,
+    compact: Boolean = false
 ) {
     Box(
         modifier
@@ -79,25 +81,27 @@ fun InkoraPaperPreview(
             RichText.displayTitle(note.title, note.content, note.contentFormat)
         }
         InkoraPaperSurface(
-            modifier = Modifier.fillMaxWidth().height(190.dp),
+            modifier = Modifier.fillMaxWidth().height(if (compact) 132.dp else 190.dp),
             background = bgKey,
             customHex = note.backgroundColor,
             pageStyle = note.pageStyle
         ) {
-            Column(Modifier.fillMaxWidth().padding(14.dp)) {
+            Column(Modifier.fillMaxWidth().padding(if (compact) 10.dp else 14.dp)) {
                 Text(
                     text = displayTitle.ifBlank { "Untitled" },
                     style = MaterialTheme.typography.titleMedium,
                     color = ink,
-                    maxLines = 2,
+                    maxLines = if (compact) 1 else 2,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = excerpt.ifBlank { "No text yet" },
+                    // Privacy mode masks the body so sensitive surfaces
+                    // (recents, shoulders) never leak note content.
+                    text = if (hideContent) "Locked note" else excerpt.ifBlank { "No text yet" },
                     style = MaterialTheme.typography.bodyMedium,
                     color = muted,
-                    maxLines = 5,
+                    maxLines = if (compact) 2 else 5,
                     overflow = TextOverflow.Ellipsis
                 )
             }
