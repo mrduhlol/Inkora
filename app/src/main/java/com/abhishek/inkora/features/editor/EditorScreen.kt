@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
@@ -78,6 +79,7 @@ import com.abhishek.inkora.domain.model.PageStyle
 import com.abhishek.inkora.domain.model.PaperBackground
 import com.abhishek.inkora.domain.model.ParaAlign
 import com.abhishek.inkora.domain.model.SpanKind
+import com.abhishek.inkora.features.draw.DrawDialog
 import com.abhishek.inkora.ui.components.FormattingToolbar
 import com.abhishek.inkora.ui.components.InkoraPaperSurface
 import com.abhishek.inkora.ui.components.InkoraTopBar
@@ -110,6 +112,7 @@ fun EditorScreen(
     var styleSheet by remember { mutableStateOf(false) }
     var folderDialog by remember { mutableStateOf(false) }
     var infoDialog by remember { mutableStateOf(false) }
+    var showDraw by remember { mutableStateOf(false) }
     var viewer by remember { mutableStateOf<Attachment?>(null) }
     val note = state.note
     val titleFocus = remember { FocusRequester() }
@@ -176,6 +179,11 @@ fun EditorScreen(
                             menu = false
                             picker.launch("image/*")
                         }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Draw") },
+                        leadingIcon = { Icon(Icons.Filled.Brush, null) },
+                        onClick = { menu = false; showDraw = true }
                     )
                     DropdownMenuItem(
                         text = { Text("Note info") },
@@ -384,8 +392,14 @@ fun EditorScreen(
             )
         }
 
-        if (styleSheet) {
-            ModalBottomSheet(onDismissRequest = { styleSheet = false }, sheetState = rememberModalBottomSheetState()) {
+        if (showDraw) {
+            DrawDialog(
+                onDismiss = { showDraw = false },
+                onSave = { png -> vm.addDrawing(png); showDraw = false }
+            )
+        }
+
+        if (styleSheet) {            ModalBottomSheet(onDismissRequest = { styleSheet = false }, sheetState = rememberModalBottomSheetState()) {
                 Column(Modifier.padding(20.dp)) {
                     Text("Page style", fontSize = 18.sp)
                     PageStyleSelector(
