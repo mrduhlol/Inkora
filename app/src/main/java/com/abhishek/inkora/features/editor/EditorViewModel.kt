@@ -325,6 +325,25 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch { attachmentsRepo.remove(id) }
     }
 
+    fun addFile(uri: Uri) {
+        viewModelScope.launch {
+            val id = attachmentsRepo.addFile(noteId, uri)
+            if (id == null) {
+                _state.value = _state.value.copy(saveError = "Couldn't attach that file (25MB max)")
+            } else {
+                scheduleSave()
+            }
+        }
+    }
+
+    fun toggleArchiveState() {
+        val n = _state.value.note ?: return
+        viewModelScope.launch {
+            notes.setArchived(n.id, !n.isArchived)
+            _state.value = _state.value.copy(note = n.copy(isArchived = !n.isArchived))
+        }
+    }
+
     /** Lightweight stats, computed on demand for Note Info (never per keystroke). */
     fun stats(): NoteStats {
         val text = _state.value.doc.toRich().text
