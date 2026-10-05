@@ -43,6 +43,10 @@ interface NoteDao {
     )
     fun observeNotesWithTag(tagId: Long): Flow<List<NoteEntity>>
 
+    /** Note ids that have at least one attachment (for the Has-images filter). */
+    @Query("SELECT DISTINCT noteId FROM attachments")
+    fun observeNoteIdsWithAttachments(): Flow<List<Long>>
+
     @Query("SELECT * FROM notes WHERE id = :id LIMIT 1")
     suspend fun getById(id: Long): NoteEntity?
 
