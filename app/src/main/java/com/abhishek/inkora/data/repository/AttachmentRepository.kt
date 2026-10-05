@@ -147,6 +147,22 @@ class AttachmentRepository @Inject constructor(
             rowId
         }
 
+    /** Store raw generic-file bytes (import path). */
+    suspend fun storeFileBytes(noteId: Long, fileName: String, mime: String, bytes: ByteArray): Long =
+        withContext(Dispatchers.IO) {
+            val rowId = dao.insert(
+                AttachmentEntity(noteId = noteId, fileName = fileName, mimeType = mime, kind = "file")
+            )
+            File(fileDir, "${rowId}_$fileName").writeBytes(bytes)
+            dao.insert(
+                AttachmentEntity(
+                    id = rowId, noteId = noteId, fileName = fileName, mimeType = mime,
+                    kind = "file", sizeBytes = bytes.size.toLong()
+                )
+            )
+            rowId
+        }
+
     suspend fun readBytes(id: Long): ByteArray? = withContext(Dispatchers.IO) {
         val e = dao.getById(id) ?: return@withContext null
         runCatching { fileFor(e).readBytes() }.getOrNull()
