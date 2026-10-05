@@ -11,7 +11,7 @@
 > No account. No cloud. No tracking. Everything stays on your device.
 
 <p align="center">
-  <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.3.apk">
+  <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.4.apk">
     <img src="https://img.shields.io/badge/Download_Inkora_v1.3_APK-6750A4?style=for-the-badge&logo=android&logoColor=white" alt="Download Inkora v1.3 APK" />
   </a>
 </p>
@@ -21,6 +21,24 @@
 </p>
 
 ---
+
+## New in v1.4
+
+v1.4 makes Inkora a serious everyday notebook — structured documents, organization, attachments and privacy, still offline and lightweight:
+
+- **Links** — select text, attach a URL, tap to open in your browser. Edit or remove without retyping. Visible text never shows markup.
+- **Tables** — real grids with a rows/cols picker and a cell editor (add/remove rows and columns). Enter continues rows; Enter on an empty row exits.
+- **Code blocks** — monospaced blocks with a distinct background for commands and snippets. Preserved whitespace, clean copy.
+- **Two-tier toolbar** — everyday tools up front, advanced controls (heading, quote, code, link, table, image, draw, alignment, indent) behind More.
+- **Image gallery** — swipe between a note's images full-screen with position and filename.
+- **File attachments** — PDFs, text and documents as compact cards with type, size, external open and guarded remove. Stored privately, capped at 25MB.
+- **Tags** — lightweight `#tag` metadata (never body syntax) with per-note management, search integration and Home tag filters.
+- **Search filters** — All, Favorites, Pinned, Archived, Images plus tag chips in one compact row.
+- **Templates** — Meeting, Study, Journal, Project, Lecture and Checklist starters from the Home menu. The + button still creates a blank note instantly.
+- **Archive, finished** — dedicated screen with explicit Unarchive, plus archive in multi-select and the editor menu.
+- **Privacy** — optional device screen-lock gate (biometric/PIN, nothing stored), preview masking ("Locked note"), and optional screenshot blocking. All off by default.
+- **Comfort options** — compact/comfortable card density and a constrained reading width on tablets and landscape.
+- **Backup format 2** — exports now carry tags and file attachments; v1 backups still import.
 
 ## New in v1.3
 
@@ -78,7 +96,20 @@ v1.1 rebuilds the editor around real rich text and fixes the most-reported v1.0 
 
 **Fully offline.** Create, format, trash, restore, favorite, archive, search and file notes with airplane mode on. Notes survive app kill, force-stop and reboot via Room.
 
-## Inside v1.3
+## Inside v1.4
+
+- [x] Links with edit/remove/open and URL validation
+- [x] Real tables with structured cell editing and row/col management
+- [x] Code blocks with monospace styling and preserved whitespace
+- [x] Two-tier toolbar with expandable advanced panel
+- [x] Swipeable image gallery and generic file attachment cards
+- [x] Tags with search, filters and backup support
+- [x] Home search filters, card density and tablet reading width
+- [x] Six note templates via optional picker
+- [x] Archive screen with Unarchive plus batch and editor actions
+- [x] App lock, preview masking and screenshot blocking (all opt-in)
+- [x] Additive Room v2 to v3 migration with data-preservation test
+- [x] Unit tests: links, code, tables, tags, export v2, migration
 
 - [x] Home sections (Pinned, All Notes), four sort orders, grid and list views
 - [x] Multi-select with pin, favorite, folder-move and trash batch actions
@@ -127,7 +158,7 @@ app/src/main/java/com/abhishek/inkora/
 
 **Option A — download (easiest).**
 
-[Download Inkora v1.3 APK](https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.3.apk)
+[Download Inkora v1.3 APK](https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.4.apk)
 
 Then allow installs from unknown apps, open the file, and write your first page.
 
@@ -157,4 +188,4 @@ Issues and pull requests are welcome. Keep the notebook calm: no gradients for f
 
 ---
 
-<p align="center"><b>INKORA v1.3</b> — write quietly. · <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.3">Release notes</a> · <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.3.apk">Download APK</a></p>
+<p align="center"><b>INKORA v1.4</b> — write quietly. · <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.4">Release notes</a> · <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.4.apk">Download APK</a></p>
