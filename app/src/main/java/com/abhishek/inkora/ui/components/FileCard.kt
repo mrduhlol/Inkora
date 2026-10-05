@@ -29,7 +29,7 @@ fun FileCard(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(modifier.fillMaxWidth(), onClick = onOpen) {
+    Card(onClick = onOpen, modifier = modifier.fillMaxWidth()) {
         Row(
             Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
