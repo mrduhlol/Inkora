@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.abhishek.inkora.domain.model.PageStyle
 import com.abhishek.inkora.ui.theme.DotColor
 import com.abhishek.inkora.ui.theme.GridLine
+import com.abhishek.inkora.ui.theme.InkoraTokens
 import com.abhishek.inkora.ui.theme.RuleLine
 import com.abhishek.inkora.ui.theme.paperColorFor
 
@@ -45,10 +46,10 @@ fun InkoraPaperSurface(
 ) {
     val paper = paperColorFor(background, customHex)
     Surface(
-        modifier = modifier.clip(RoundedCornerShape(14.dp)),
+        modifier = modifier.clip(RoundedCornerShape(InkoraTokens.PaperCardRadius)),
         color = paper,
-        tonalElevation = 1.dp,
-        shadowElevation = 3.dp
+        tonalElevation = InkoraTokens.PaperTonal,
+        shadowElevation = InkoraTokens.PaperShadow
     ) {
         Box(Modifier.fillMaxSize()) {
             Canvas(Modifier.fillMaxSize()) {
