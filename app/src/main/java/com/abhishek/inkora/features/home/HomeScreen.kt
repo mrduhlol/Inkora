@@ -1,6 +1,7 @@
 package com.abhishek.inkora.features.home
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -201,8 +202,20 @@ fun HomeScreen(
         }
         }
 
-        if (folderDialog) {
-            val count = state.selection.size
+        if (templateSheet) {
+            TemplateSheet(
+                onDismiss = { templateSheet = false },
+                onPick = { t ->
+                    templateSheet = false
+                    scope.launch {
+                        val id = vm.createFromTemplate(t)
+                        onOpenNote(id)
+                    }
+                }
+            )
+        }
+
+        if (folderDialog) {            val count = state.selection.size
             AlertDialog(
                 onDismissRequest = { folderDialog = false },
                 confirmButton = { TextButton(onClick = { folderDialog = false }) { Text("Done") } },
@@ -249,6 +262,7 @@ private fun BrandRow(
         Box {
             IconButton(onClick = onOverflow) { Icon(Icons.Filled.MoreVert, "More options") }
             DropdownMenu(expanded = overflowExpanded, onDismissRequest = onOverflowDismiss) {
+                DropdownMenuItem(text = { Text("New from template") }, onClick = { onOverflowDismiss(); templateSheet = true })
                 DropdownMenuItem(text = { Text("Archive") }, onClick = { onOverflowDismiss(); onOpenArchive() })
                 DropdownMenuItem(text = { Text("Trash") }, onClick = { onOverflowDismiss(); onOpenTrash() })
             }
@@ -449,6 +463,31 @@ private fun MoveTargetRow(name: String, selected: Boolean, onClick: () -> Unit) 
         Text(name, Modifier.weight(1f))
         RadioButton(selected = selected, onClick = onClick)
     }
+}
+
+/** Template picker sheet. The + FAB still creates a blank note instantly. */
+@Composable
+private fun TemplateSheet(onDismiss: () -> Unit, onPick: (com.abhishek.inkora.features.templates.NoteTemplate) -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        title = { Text("New from template") },
+        text = {
+            Column {
+                com.abhishek.inkora.features.templates.NoteTemplates.forEach { t ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable(onClick = { onPick(t) }).padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(t.name, style = MaterialTheme.typography.bodyLarge)
+                            Text(t.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        }
+    )
 }
 
 /** Intentional empty state for searches with no matches. */
