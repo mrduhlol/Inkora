@@ -165,4 +165,56 @@ class RichTextTest {
         val p = RichText.plain(c)
         assertTrue(!p.contains("---"))
     }
+
+    @Test fun normalizeUrl_addsSchemeAndRejectsGarbage() {
+        assertEquals("https://example.com", RichText.normalizeUrl("example.com"))
+        assertEquals("https://example.com/a", RichText.normalizeUrl("https://example.com/a"))
+        assertEquals(null, RichText.normalizeUrl(""))
+        assertEquals(null, RichText.normalizeUrl("not a url"))
+        assertEquals(null, RichText.normalizeUrl("localhost"))
+    }
+
+    @Test fun link_setRemoveAndLookup() {
+        var c = RichContent("OpenAI rules")
+        c = RichText.setLink(c, 0, 6, "https://openai.com")
+        assertEquals("OpenAI rules", c.text) // text untouched
+        assertEquals("https://openai.com", RichText.linkAt(c, 3)?.url)
+        assertEquals(null, RichText.linkAt(c, 8))
+        c = RichText.removeLinksIn(c, 0, 6)
+        assertTrue(c.links.isEmpty())
+    }
+
+    @Test fun link_overlappingReplaced() {
+        var c = RichContent("Hello World")
+        c = RichText.setLink(c, 0, 5, "https://a.com")
+        c = RichText.setLink(c, 3, 8, "https://b.com")
+        assertEquals(1, c.links.size)
+        assertEquals("https://b.com", c.links.single().url)
+    }
+
+    @Test fun table_cellsRoundTrip() {
+        val row = RichText.buildTableRow(listOf("Physics", "85"))
+        assertEquals(listOf("Physics", "85"), RichText.tableCells(row))
+        assertEquals(listOf(""), RichText.tableCells(""))
+    }
+
+    @Test fun table_groupSpansConsecutiveRows() {
+        val c = RichContent(
+            "Intro\nA │ 1\nB │ 2\nOutro",
+            emptyList(),
+            listOf(RichBlock(1, BlockKind.TABLE), RichBlock(2, BlockKind.TABLE))
+        )
+        assertEquals(1..2, RichText.tableGroup(c, 1))
+        assertEquals(1..2, RichText.tableGroup(c, 2))
+        assertEquals(null, RichText.tableGroup(c, 0))
+        assertEquals(2, RichText.tableColCount(c, 1..2))
+    }
+
+    @Test fun code_enterContinuesAndBlankExits() {
+        val c = RichContent("print(1)", emptyList(), listOf(RichBlock(0, BlockKind.CODE)))
+        val continued = RichText.enterBlocks(c, 0, lineTextIsBlank = false, newLineCount = 2)
+        assertEquals(BlockKind.CODE, continued.first { it.line == 1 }.kind)
+        val exited = RichText.enterBlocks(c, 0, lineTextIsBlank = true, newLineCount = 2)
+        assertTrue(exited.none { it.line == 0 })
+    }
 }
