@@ -1,6 +1,7 @@
 package com.abhishek.inkora.features.home
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -405,6 +406,7 @@ private fun SectionHeader(title: String) {
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NoteSectionsGrid(
     pinned: List<Note>,
@@ -456,6 +458,7 @@ private fun NoteSectionsGrid(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NoteList(
     pinned: List<Note>,
