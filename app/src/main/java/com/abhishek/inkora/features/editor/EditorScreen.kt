@@ -72,6 +72,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
@@ -135,6 +137,7 @@ fun EditorScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) vm.addImage(uri)
     }
@@ -291,6 +294,11 @@ fun EditorScreen(
                                             doc.lines.getOrNull(li)?.block == BlockKind.CHECK
                                         ) {
                                             down.consume()
+                                            val wasChecked = doc.lines.getOrNull(li)?.checked == true
+                                            haptics.performHapticFeedback(
+                                                if (wasChecked) HapticFeedbackType.ToggleOff
+                                                else HapticFeedbackType.ToggleOn
+                                            )
                                             vm.toggleCheck(li)
                                         }
                                     }
