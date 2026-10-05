@@ -206,7 +206,30 @@ object RichText {
         }.take(newLineCount).sortedBy { it.line }
     }
 
-    // ---------- plain / preview text (no syntax, ever) ----------
+    // ---------- table helpers ----------
+
+    /** Split a TABLE row line into cells. Separator is structural, never markup. */
+    fun tableCells(line: String): List<String> =
+        line.split(TABLE_SEP).map { it.trim() }
+
+    fun buildTableRow(cells: List<String>): String =
+        cells.joinToString(TABLE_SEP)
+
+    /** Consecutive TABLE lines containing [line], or null when [line] isn't a table row. */
+    fun tableGroup(c: RichContent, line: Int): IntRange? {
+        if (blockAt(c, line).kind != BlockKind.TABLE) return null
+        var s = line
+        var e = line
+        while (s - 1 >= 0 && blockAt(c, s - 1).kind == BlockKind.TABLE) s--
+        val count = linesOf(c.text).size
+        while (e + 1 < count && blockAt(c, e + 1).kind == BlockKind.TABLE) e++
+        return s..e
+    }
+
+    fun tableColCount(c: RichContent, group: IntRange): Int {
+        val lines = linesOf(c.text)
+        return group.maxOfOrNull { tableCells(lines.getOrNull(it).orEmpty()).size }?.coerceAtLeast(1) ?: 1
+    }
 
     /**
      * Display title: the user's title, or the first meaningful content line when
