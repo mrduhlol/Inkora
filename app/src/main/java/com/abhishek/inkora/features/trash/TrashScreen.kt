@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -30,8 +31,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import kotlinx.coroutines.launch
+import com.abhishek.inkora.data.local.database.TagDao
+import com.abhishek.inkora.data.local.database.entities.NoteTagCrossRef
 import com.abhishek.inkora.data.repository.AttachmentRepository
+import com.abhishek.inkora.data.repository.AttachmentRepository.AttachmentBackup
 import com.abhishek.inkora.data.repository.DataRepository
+import com.abhishek.inkora.domain.model.Note
 import com.abhishek.inkora.domain.repository.NoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -45,15 +54,48 @@ import kotlinx.coroutines.launch
 class TrashViewModel @Inject constructor(
     private val notes: NoteRepository,
     private val attachments: AttachmentRepository,
+    private val tags: TagDao,
     private val data: DataRepository
 ) : ViewModel() {
     val trash = notes.observeTrash().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     private val _cleared = MutableStateFlow<Int?>(null)
     val cleared: StateFlow<Int?> = _cleared
     fun restore(id: Long) = viewModelScope.launch { notes.restore(id) }
-    fun deleteForever(id: Long) = viewModelScope.launch {
-        attachments.removeForNote(id)
-        notes.deleteForever(id)
+
+    private data class DeletedNote(val note: Note, val files: List<AttachmentBackup>, val tagIds: List<Long>)
+    private var lastDeleted: DeletedNote? = null
+
+    /**
+     * Permanent delete with a real undo window: the note row, tag links and
+     * attachment bytes are cached first. [onDone] reports whether undo is
+     * available (huge attachments skip the cache to protect memory).
+     */
+    fun deleteForever(id: Long, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
+        val note = notes.getById(id)
+        val files = attachments.snapshotForNote(id)
+        if (note != null && files != null) {
+            val tagIds = runCatching { tags.listTagsForNote(id).map { it.id } }.getOrDefault(emptyList())
+            attachments.removeForNote(id)
+            notes.deleteForever(id)
+            lastDeleted = DeletedNote(note, files, tagIds)
+            onDone(true)
+        } else {
+            if (note != null) {
+                attachments.removeForNote(id)
+                notes.deleteForever(id)
+            }
+            onDone(false)
+        }
+    }
+
+    fun undoDelete() {
+        val deleted = lastDeleted ?: return
+        lastDeleted = null
+        viewModelScope.launch {
+            val id = notes.upsert(deleted.note.copy(isDeleted = false))
+            deleted.files.forEach { attachments.restoreSnapshot(id, it) }
+            deleted.tagIds.forEach { runCatching { tags.link(NoteTagCrossRef(id, it)) } }
+        }
     }
     fun emptyTrash() = viewModelScope.launch { _cleared.value = data.clearTrash() }
     fun consumeCleared() { _cleared.value = null }
@@ -65,7 +107,10 @@ fun TrashScreen(onBack: () -> Unit, vm: TrashViewModel = hiltViewModel()) {
     val items by vm.trash.collectAsStateWithLifecycle()
     var pendingDelete: Long? by remember { mutableStateOf(null) }
     var confirmEmpty by remember { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
@@ -111,13 +156,24 @@ fun TrashScreen(onBack: () -> Unit, vm: TrashViewModel = hiltViewModel()) {
             AlertDialog(
                 onDismissRequest = { pendingDelete = null },
                 confirmButton = {
-                    TextButton(onClick = { vm.deleteForever(doomed); pendingDelete = null }) {
+                    TextButton(onClick = {
+                        pendingDelete = null
+                        vm.deleteForever(doomed) { undoable ->
+                            scope.launch {
+                                if (undoable && snackbar.showSnackbar("Note deleted", actionLabel = "UNDO") ==
+                                    SnackbarResult.ActionPerformed
+                                ) {
+                                    vm.undoDelete()
+                                }
+                            }
+                        }
+                    }) {
                         Text("Delete forever")
                     }
                 },
                 dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Keep") } },
                 title = { Text("Delete forever?") },
-                text = { Text("This cannot be undone. Restore keeps everything instead.") }
+                text = { Text("You can undo right after deleting. Restore keeps everything instead.") }
             )
         }
         if (confirmEmpty) {
