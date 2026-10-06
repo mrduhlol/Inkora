@@ -45,7 +45,7 @@ class HandwritingRepository @Inject constructor(
         dao.upsert(
             HandwritingDocEntity(
                 noteId = noteId,
-                strokesJson = HwJson.encodeToString(HwDoc.serializer(), HwDoc(strokes)),
+                strokesJson = encodeHw(strokes),
                 updatedAt = System.currentTimeMillis()
             )
         )
