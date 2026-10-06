@@ -1,10 +1,15 @@
 package com.abhishek.inkora.features.editor
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -241,6 +246,69 @@ fun TagsDialog(
                                 Icon(Icons.Filled.Close, "Remove tag ${t.name}")
                             }
                         }
+                    }
+                }
+            }
+        }
+    )
+}
+
+/**
+ * Curated text-color palette rendered on the note's own paper, so contrast
+ * is judged honestly. Picks are contrast-guarded before application;
+ * "Default" clears the override back to paper ink.
+ */
+@Composable
+fun TextColorDialog(
+    paper: androidx.compose.ui.graphics.Color,
+    ink: androidx.compose.ui.graphics.Color,
+    accent: androidx.compose.ui.graphics.Color,
+    current: Int?,
+    onDismiss: () -> Unit,
+    onPick: (Int?) -> Unit
+) {
+    val options: List<Pair<String, Int?>> = listOf(
+        "Default" to null,
+        "Black" to 0xFF1C1B1F.toInt(),
+        "White" to 0xFFFFFFFF.toInt(),
+        "Red" to 0xFFD32F2F.toInt(),
+        "Blue" to 0xFF2F6FED.toInt(),
+        "Green" to 0xFF2E7D32.toInt(),
+        "Orange" to 0xFFE8710A.toInt(),
+        "Purple" to 0xFF6750A4.toInt(),
+        "Accent" to accent.toArgb()
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
+        title = { Text("Text color") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                options.forEach { (name, argb) ->
+                    val shown = argb?.let { com.abhishek.inkora.ui.theme.guardedTextColor(it, paper) }
+                        ?: ink
+                    val selected = if (argb == null) current == null else current == argb
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .clickable { onPick(argb); onDismiss() }
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            Modifier.size(28.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(shown)
+                                .border(
+                                    width = if (selected) 3.dp else 1.dp,
+                                    color = if (selected) accent else androidx.compose.ui.graphics.Color.Gray,
+                                    shape = androidx.compose.foundation.shape.CircleShape
+                                )
+                        )
+                        Text(
+                            name + if (argb != null && shown.toArgb() != argb) " (adjusted for contrast)" else "",
+                            Modifier.padding(start = 12.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                     }
                 }
             }
