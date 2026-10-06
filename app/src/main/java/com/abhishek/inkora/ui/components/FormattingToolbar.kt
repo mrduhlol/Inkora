@@ -1,11 +1,14 @@
 package com.abhishek.inkora.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
@@ -19,6 +22,7 @@ import androidx.compose.material.icons.filled.FormatAlignJustify
 import androidx.compose.material.icons.filled.FormatAlignLeft
 import androidx.compose.material.icons.filled.FormatAlignRight
 import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatColorText
 import androidx.compose.material.icons.filled.FormatIndentDecrease
 import androidx.compose.material.icons.filled.FormatIndentIncrease
 import androidx.compose.material.icons.filled.FormatItalic
@@ -31,6 +35,8 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.TableChart
+import androidx.compose.material.icons.filled.TextDecrease
+import androidx.compose.material.icons.filled.TextIncrease
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.Icon
@@ -38,12 +44,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -85,6 +94,12 @@ fun FormattingToolbar(
     onAlign: () -> Unit = {},
     onIndentMore: () -> Unit = {},
     onIndentLess: () -> Unit = {},
+    fontSize: Int? = null,
+    baseFontSize: Int = 16,
+    onShrink: () -> Unit = {},
+    onGrow: () -> Unit = {},
+    fontColor: Int? = null,
+    onColor: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -181,6 +196,37 @@ fun FormattingToolbar(
                     }
                     ToolButton("Increase indent", onClick = onIndentMore) {
                         Icon(Icons.Filled.FormatIndentIncrease, null)
+                    }
+                    ToolButton("Smaller text", onClick = onShrink) {
+                        Icon(Icons.Filled.TextDecrease, null)
+                    }
+                    ToolButton(
+                        "Text size ${fontSize ?: baseFontSize}",
+                        active = fontSize != null,
+                        onClick = onGrow
+                    ) {
+                        Text(
+                            "${fontSize ?: baseFontSize}",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                    ToolButton("Larger text", onClick = onGrow) {
+                        Icon(Icons.Filled.TextIncrease, null)
+                    }
+                    ToolButton(
+                        "Text color" + (if (fontColor != null) ": custom" else ": default"),
+                        active = fontColor != null,
+                        onClick = onColor
+                    ) {
+                        if (fontColor != null) {
+                            Box(
+                                Modifier.size(20.dp)
+                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                    .background(Color(fontColor))
+                            )
+                        } else {
+                            Icon(Icons.Filled.FormatColorText, null)
+                        }
                     }
                 }
             }
