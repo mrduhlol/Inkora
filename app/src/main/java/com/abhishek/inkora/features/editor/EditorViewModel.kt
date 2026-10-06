@@ -145,6 +145,18 @@ class EditorViewModel @Inject constructor(
 
     fun applyColor(argb: Int?) = structureOp { it.applyColor(argb) }
 
+    /** Step body size through presets. Landing back on default clears the override. */
+    fun adjustTextSize(dir: Int) {
+        val doc = _state.value.doc
+        val base = _state.value.textSizeSp
+        val sizes = RichText.TEXT_SIZES_SP
+        val cur = doc.activeSize() ?: base
+        val pos = sizes.indexOf(cur).let { if (it < 0) sizes.count { s -> s < cur } else it }
+        val target = sizes[(pos + dir).coerceIn(sizes.indices)]
+        if (target == base) structureOp { it.applySize(null) }
+        else structureOp { it.applySize(target) }
+    }
+
     fun toggleBlock(kind: BlockKind) {
         pushUndo()
         _state.value = _state.value.copy(doc = _state.value.doc.toggleBlock(kind))
