@@ -33,8 +33,21 @@ class FavoritesViewModel @Inject constructor(private val notes: NoteRepository) 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FavoritesScreen(onBack: () -> Unit, onOpen: (Long) -> Unit, vm: FavoritesViewModel = hiltViewModel()) {
+fun FavoritesScreen(
+    onBack: () -> Unit,
+    onOpen: (Long) -> Unit,
+    onOpenHandwriting: (Long) -> Unit = onOpen,
+    vm: FavoritesViewModel = hiltViewModel()
+) {
     val items by vm.favs.collectAsStateWithLifecycle()
+    val openById: (Long) -> Unit = { id ->
+        val note = items.firstOrNull { it.id == id }
+        if (note?.noteType == com.abhishek.inkora.domain.model.NoteType.HANDWRITING) {
+            onOpenHandwriting(id)
+        } else {
+            onOpen(id)
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -48,7 +61,7 @@ fun FavoritesScreen(onBack: () -> Unit, onOpen: (Long) -> Unit, vm: FavoritesVie
         } else {
             NoteGrid(
                 notes = items,
-                onOpen = onOpen,
+                onOpen = openById,
                 onToggleFavorite = { id -> items.firstOrNull { it.id == id }?.let { vm.toggle(it.id, it.isFavorite) } },
                 modifier = Modifier.padding(pad)
             )
