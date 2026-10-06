@@ -219,4 +219,48 @@ class RichEditorTest {
         d = d.onInput("$rendered2\n", TextRange(rendered2.length + 1, rendered2.length + 1))
         assertEquals(BlockKind.PARAGRAPH, d.lines[2].block)
     }
+
+    @Test fun contentBounds_excludesGeneratedPrefix() {
+        val d = docOf("Apple\nBanana", TextRange(0, 0)).toggleBlock(BlockKind.BULLET)
+        // Rendered: "• Apple\n• Banana" — content of line 0 starts after "• ".
+        assertEquals(2 to 7, d.contentBounds(0))
+        assertEquals(10 to 16, d.contentBounds(1))
+        assertEquals(null, d.contentBounds(5))
+    }
+
+    @Test fun size_appliesOnlyToSelection() {
+        var d = docOf("Hello World", TextRange(6, 11)).applySize(20)
+        assertEquals("Hello World", d.toRich().text)
+        assertEquals(20, d.toRich().spans.single().sizeSp)
+        assertEquals(20, d.copy(selection = TextRange(6, 11)).activeSize())
+        // Clearing restores default.
+        d = d.copy(selection = TextRange(6, 11)).applySize(null)
+        assertTrue(d.toRich().spans.none { it.kind == SpanKind.SIZE })
+    }
+
+    @Test fun size_mixedSelectionReportsNull() {
+        val d = docOf("Hello World", TextRange(0, 5)).applySize(12)
+        assertEquals(null, d.copy(selection = TextRange(0, 11)).activeSize())
+        assertEquals(12, d.copy(selection = TextRange(0, 5)).activeSize())
+    }
+
+    @Test fun size_collapsedStagesPendingForTypedText() {
+        val d0 = docOf("Hi", TextRange(1, 1)).applySize(24)
+        assertTrue(d0.toRich().spans.isEmpty())
+        val typed = "HXi"
+        val d1 = d0.onInput(typed, TextRange(2, 2))
+        val spans = d1.toRich().spans.filter { it.kind == SpanKind.SIZE }
+        assertEquals(1, spans.size)
+        assertEquals(1 to 2, spans.single().start to spans.single().end)
+    }
+
+    @Test fun color_appliesClearsAndReports() {
+        var d = docOf("Hello", TextRange(0, 5)).applyColor(-65536)
+        assertEquals(-65536, d.toRich().spans.single().colorArgb)
+        assertEquals(-65536, d.copy(selection = TextRange(0, 5)).activeColor())
+        d = d.copy(selection = TextRange(0, 2)).applyColor(null)
+        assertEquals(1, d.toRich().spans.size) // survivor on 2..5
+        d = d.copy(selection = TextRange(0, 5)).applyColor(null)
+        assertTrue(d.toRich().spans.isEmpty())
+    }
 }
