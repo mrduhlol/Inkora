@@ -343,7 +343,7 @@ fun HandwritingScreen(
             Canvas(Modifier.fillMaxSize()) {
                 withTransform({
                     translate(offset.x, offset.y)
-                    scale(scale, Offset.Zero)
+                    scale(scale, scale)
                 }) {
                     // Virtual sheet.
                     drawRect(color = paper, topLeft = Offset.Zero, size = androidx.compose.ui.geometry.Size(CANVAS_SIZE, CANVAS_SIZE))
