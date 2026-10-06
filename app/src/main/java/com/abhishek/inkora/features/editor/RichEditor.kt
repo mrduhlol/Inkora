@@ -52,7 +52,9 @@ fun ParaAlign.toTextAlign(): TextAlign = when (this) {
 data class RichDoc(
     val lines: List<EditLine> = listOf(EditLine()),
     val selection: TextRange = TextRange.Zero,
-    val pending: Set<SpanKind> = emptySet()
+    val pending: Set<SpanKind> = emptySet(),
+    val pendingSize: Int? = null,
+    val pendingColor: Int? = null
 ) {
     companion object {
         /** Invisible indent prefix: em-spaces, never user syntax. */
@@ -252,6 +254,13 @@ data class RichDoc(
                 doc = doc.addSpansAbsolute(ins.first, ins.second, pending)
             }
             doc = doc.copy(pending = emptySet())
+        }
+        if (pendingSize != null || pendingColor != null) {
+            val ins = insertedRange(oldRendered, newRendered)
+            if (ins != null && ins.first < ins.second && !newRendered.substring(ins.first, ins.second).contains('\n')) {
+                doc = doc.addValueSpansAbsolute(ins.first, ins.second, pendingSize, pendingColor)
+            }
+            doc = doc.copy(pendingSize = null, pendingColor = null)
         }
         return doc
     }
@@ -484,6 +493,33 @@ data class RichDoc(
         return doc
     }
 
+    /** Set-semantics span write for a rendered range (size/color, never whole-document). */
+    private fun addValueSpansAbsolute(s: Int, e: Int, sizeSp: Int?, colorArgb: Int?): RichDoc {
+        val r = rendered()
+        val updated = lines.mapIndexed { li, line ->
+            val ls = renderedLineStart(r, li)
+            val pl = linePrefixLen(line, li)
+            val rs = (s - ls - pl).coerceIn(0, line.text.length)
+            val re = (e - ls - pl).coerceIn(0, line.text.length)
+            if (rs >= re) return@mapIndexed line
+            var spans = line.spans
+            if (sizeSp != null) spans = replaceSpan(spans, rs, re, RichSpan(rs, re, SpanKind.SIZE, sizeSp = sizeSp))
+            if (colorArgb != null) spans = replaceSpan(spans, rs, re, RichSpan(rs, re, SpanKind.COLOR, colorArgb = colorArgb))
+            line.copy(spans = spans.sortedWith(compareBy({ it.start }, { it.end })))
+        }
+        return copy(lines = updated)
+    }
+
+    private fun replaceSpan(spans: List<RichSpan>, s: Int, e: Int, span: RichSpan): List<RichSpan> {
+        val kept = spans.filterNot { it.kind == span.kind && it.end > s && it.start < e }.toMutableList()
+        spans.filter { it.kind == span.kind && it.end > s && it.start < e }.forEach { sp ->
+            if (sp.start < s) kept.add(sp.copy(start = sp.start, end = s))
+            if (sp.end > e) kept.add(sp.copy(start = e, end = sp.end))
+        }
+        kept.add(span)
+        return kept
+    }
+
     private fun addOrRemoveAbsolute(s: Int, e: Int, kind: SpanKind, addOnly: Boolean = false): RichDoc {
         val r = rendered()
         val covered = (s until e).all { i ->
@@ -536,6 +572,104 @@ data class RichDoc(
         val cur = lines.getOrNull(line) ?: return this
         if (cur.block != BlockKind.CHECK) return this
         return copy(lines = lines.mapIndexed { i, l -> if (i == line) l.copy(checked = !l.checked) else l })
+    }
+
+    // ---------- size / color (selection-scoped, set semantics) ----------
+
+    private fun contentLineStarts(text: String): List<Int> {
+        val starts = mutableListOf(0)
+        text.forEachIndexed { i, ch -> if (ch == '\n') starts.add(i + 1) }
+        return starts
+    }
+
+    /** Apply [sizeSp] to the selection, or stage it for subsequently typed text. Null clears. */
+    fun applySize(sizeSp: Int?): RichDoc {
+        val (s, e) = selection.min to selection.max
+        if (s >= e) return copy(pendingSize = sizeSp)
+        val r = rendered()
+        var rich = toRich()
+        val starts = contentLineStarts(rich.text)
+        lines.forEachIndexed { li, line ->
+            val ls = renderedLineStart(r, li)
+            val lineEnd = ls + linePrefixLen(line, li) + line.text.length
+            if (e <= ls || s >= lineEnd) return@forEachIndexed
+            val (rs, re) = relRange(r, li, maxOf(s, ls), minOf(e, lineEnd)) ?: return@forEachIndexed
+            val base = starts.getOrElse(li) { rich.text.length }
+            rich = if (sizeSp == null) RichText.clearSize(rich, base + rs, base + re)
+            else RichText.setSize(rich, base + rs, base + re, sizeSp)
+        }
+        return RichDoc.fromRich(rich, selection).copy(pendingSize = null)
+    }
+
+    /** Apply [colorArgb] to the selection, or stage it for subsequently typed text. Null clears. */
+    fun applyColor(colorArgb: Int?): RichDoc {
+        val (s, e) = selection.min to selection.max
+        if (s >= e) return copy(pendingColor = colorArgb)
+        val r = rendered()
+        var rich = toRich()
+        val starts = contentLineStarts(rich.text)
+        lines.forEachIndexed { li, line ->
+            val ls = renderedLineStart(r, li)
+            val lineEnd = ls + linePrefixLen(line, li) + line.text.length
+            if (e <= ls || s >= lineEnd) return@forEachIndexed
+            val (rs, re) = relRange(r, li, maxOf(s, ls), minOf(e, lineEnd)) ?: return@forEachIndexed
+            val base = starts.getOrElse(li) { rich.text.length }
+            rich = if (colorArgb == null) RichText.clearColor(rich, base + rs, base + re)
+            else RichText.setColor(rich, base + rs, base + re, colorArgb)
+        }
+        return RichDoc.fromRich(rich, selection).copy(pendingColor = null)
+    }
+
+    /** Uniform SIZE value across selection/cursor, else null when mixed or default. */
+    fun activeSize(): Int? {
+        val (s, e) = selection.min to selection.max
+        val r = rendered()
+        if (s < e) {
+            var value: Int? = null
+            var found = false
+            for (i in s until e) {
+                val li = renderedLineOf(r, i)
+                val line = lines.getOrElse(li) { return null }
+                val rel = i - renderedLineStart(r, li) - linePrefixLen(line, li)
+                val v = line.spans.firstOrNull { it.kind == SpanKind.SIZE && it.start <= rel && rel < it.end }?.sizeSp
+                if (!found) {
+                    value = v
+                    found = true
+                } else if (value != v) return null
+            }
+            return value
+        }
+        val li = renderedLineOf(r, s)
+        val line = lines.getOrNull(li) ?: return pendingSize
+        val rel = s - renderedLineStart(r, li) - linePrefixLen(line, li)
+        return line.spans.firstOrNull { it.kind == SpanKind.SIZE && it.start <= rel && rel <= it.end }?.sizeSp
+            ?: pendingSize
+    }
+
+    /** Uniform COLOR value across selection/cursor, else null when mixed or default. */
+    fun activeColor(): Int? {
+        val (s, e) = selection.min to selection.max
+        val r = rendered()
+        if (s < e) {
+            var value: Int? = null
+            var found = false
+            for (i in s until e) {
+                val li = renderedLineOf(r, i)
+                val line = lines.getOrElse(li) { return null }
+                val rel = i - renderedLineStart(r, li) - linePrefixLen(line, li)
+                val v = line.spans.firstOrNull { it.kind == SpanKind.COLOR && it.start <= rel && rel < it.end }?.colorArgb
+                if (!found) {
+                    value = v
+                    found = true
+                } else if (value != v) return null
+            }
+            return value
+        }
+        val li = renderedLineOf(r, s)
+        val line = lines.getOrNull(li) ?: return pendingColor
+        val rel = s - renderedLineStart(r, li) - linePrefixLen(line, li)
+        return line.spans.firstOrNull { it.kind == SpanKind.COLOR && it.start <= rel && rel <= it.end }?.colorArgb
+            ?: pendingColor
     }
 
     // ---------- links (rendered selection → line-relative) ----------
