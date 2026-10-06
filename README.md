@@ -11,7 +11,7 @@
 > No account. No cloud. No tracking. Everything stays on your device.
 
 <p align="center">
-  <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.5.apk">
+  <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.6.apk">
     <img src="https://img.shields.io/badge/Download_Inkora_v1.3_APK-6750A4?style=for-the-badge&logo=android&logoColor=white" alt="Download Inkora v1.3 APK" />
   </a>
 </p>
@@ -21,6 +21,21 @@
 </p>
 
 ---
+
+## New in v1.6
+
+v1.6 adds a whole new way to capture ideas — plus the typography and creation UX to match:
+
+- **Handwriting notes** — a huge zoomable canvas (0.1x–8x) with pen, stroke eraser, pan tool, curated ink palette, thickness presets, stylus support and stroke undo/redo. Ink saves as vectors, never bitmaps.
+- **Three creation modes** — the + button opens a vertical menu: Handwriting, Text, To-do list. Text still opens the full rich-text editor.
+- **To-do notes** — typed TODO notes with prefilled tasks, first-task autofocus, interactive checkboxes and full autosave. Completed tasks stay readable and persist.
+- **Warmer typography** — serif body copy for long-form comfort, sans structure. No bundled fonts, no proprietary copies — platform faces only.
+- **Text size** — A-/A+ stepper through curated presets, selection-scoped, with typing-style staging and default reset.
+- **Text color** — curated palette with honest on-paper preview and automatic contrast guarding. No invisible combinations.
+- **Reliable selection** — double-tap selects the word, triple-tap the paragraph, glyphs excluded. Double-tap never saves anything.
+- **Visible selection** — selected Home cards get an animated accent checkmark plus outline and screen-reader state.
+- **Display size** — Small/Default/Large chrome scaling from Settings, persisted, independent of note content and system font scale.
+- **Backup format 3** — note types and ink strokes round-trip; v1 and v2 backups still import.
 
 ## New in v1.5
 
@@ -109,6 +124,22 @@ v1.1 rebuilds the editor around real rich text and fixes the most-reported v1.0 
 
 **Fully offline.** Create, format, trash, restore, favorite, archive, search and file notes with airplane mode on. Notes survive app kill, force-stop and reboot via Room.
 
+## Inside v1.6
+
+- [x] Handwriting canvas (4096px virtual space, 0.1x–8x zoom, pan, stylus)
+- [x] Pen, stroke eraser and pan tools with palette and thickness presets
+- [x] Vector stroke storage with debounced autosave and cached thumbnails
+- [x] Vertical creation menu: Handwriting, Text, To-do list
+- [x] Typed notes with migration defaulting existing notes to TEXT
+- [x] To-do prefill, first-task focus and interactive checkboxes
+- [x] Serif body typography with sans structure
+- [x] Selection-scoped text size presets and guarded text colors
+- [x] Owned double/triple-tap selection, tap-aware checkbox handling
+- [x] Animated selection checkmarks with screen-reader state
+- [x] Display-size chrome scaling (Small/Default/Large), persisted
+- [x] Backup format 3 with ink and type round-trip
+- [x] Unit tests: spans, editor flows, codec, migration 3→4, export v3 (88 green on CI)
+
 ## Inside v1.5
 
 - [x] Dog-ear fold geometry with paper-derived shading and contact shadow
@@ -180,7 +211,7 @@ app/src/main/java/com/abhishek/inkora/
 
 **Option A — download (easiest).**
 
-[Download Inkora v1.3 APK](https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.5.apk)
+[Download Inkora v1.3 APK](https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.6.apk)
 
 Then allow installs from unknown apps, open the file, and write your first page.
 
@@ -210,4 +241,4 @@ Issues and pull requests are welcome. Keep the notebook calm: no gradients for f
 
 ---
 
-<p align="center"><b>INKORA v1.5</b> — write quietly. · <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.5">Release notes</a> · <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.5.apk">Download APK</a></p>
+<p align="center"><b>INKORA v1.6</b> — write quietly. · <a href="https://github.com/mrduhlol/Inkora/releases/tag/v1.6">Release notes</a> · <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.6.apk">Download APK</a></p>
