@@ -1,6 +1,7 @@
 package com.abhishek.inkora.domain.model
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 /**
  * Vector handwriting model. Strokes are points in a large virtual canvas
@@ -43,3 +44,13 @@ val INK_COLORS = listOf(
 
 /** Pen thickness presets in canvas px. */
 val PEN_WIDTHS = listOf(4f, 8f, 16f)
+
+private val HwJson = Json { ignoreUnknownKeys = true }
+
+/** Stable stroke encoding shared by storage, backup and tests. */
+fun encodeHw(strokes: List<HwStroke>): String =
+    HwJson.encodeToString(HwDoc.serializer(), HwDoc(strokes))
+
+fun decodeHw(json: String): List<HwStroke> =
+    runCatching { HwJson.decodeFromString(HwDoc.serializer(), json).strokes }
+        .getOrDefault(emptyList())
