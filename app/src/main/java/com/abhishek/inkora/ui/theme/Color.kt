@@ -36,3 +36,16 @@ fun onPaperColor(paper: Color): Color =
 /** Muted/placeholder tone with the same contrast rule. */
 fun mutedOnPaperColor(paper: Color): Color =
     if (paper.luminance() > 0.5f) PaperMuted else Color(0xFFB9B2A6)
+
+/**
+ * Guard a requested text color against the paper: obviously unreadable
+ * combinations (dark-on-dark, light-on-light) fall back to the readable ink
+ * color instead of surprising the user. Contrast threshold ~3:1.
+ */
+fun guardedTextColor(requestedArgb: Int, paper: Color): Color {
+    val requested = Color(requestedArgb)
+    val lp = paper.luminance()
+    val lr = requested.luminance()
+    val ratio = (maxOf(lp, lr) + 0.05f) / (minOf(lp, lr) + 0.05f)
+    return if (ratio >= 3f) requested else onPaperColor(paper)
+}
