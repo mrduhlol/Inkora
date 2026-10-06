@@ -55,6 +55,7 @@ class DataRepository @Inject constructor(
     private val attachmentDao: AttachmentDao,
     private val tagDao: TagDao,
     private val handwritingDao: HandwritingDao,
+    private val handwriting: HandwritingRepository,
     private val attachments: AttachmentRepository
 ) {
     suspend fun exportAll(): ByteArray = withContext(Dispatchers.IO) {
@@ -221,6 +222,7 @@ class DataRepository @Inject constructor(
         val trashed = noteDao.observeTrash().first()
         trashed.forEach { n ->
             attachments.removeForNote(n.id)
+            runCatching { handwriting.delete(n.id) }
             noteDao.deleteForever(n.id)
         }
         trashed.size
