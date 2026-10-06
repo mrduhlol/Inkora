@@ -100,6 +100,22 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = hiltViewModel()) 
             SettingRow("Dynamic color", "Follow the system palette when available") {
                 Switch(checked = s.dynamicColor, onCheckedChange = vm::setDynamic)
             }
+            Label("App display size", top = 16.dp)
+            Text(
+                "Scales Inkora's interface. Note text size stays separate.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(Modifier.padding(top = 4.dp)) {
+                com.abhishek.inkora.domain.model.DisplaySize.entries.forEach {
+                    androidx.compose.material3.FilterChip(
+                        selected = it == s.displaySize,
+                        onClick = { vm.setDisplaySize(it) },
+                        label = { Text(it.key.replaceFirstChar(Char::titlecase)) },
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
+            }
             HorizontalDivider(Modifier.padding(vertical = 20.dp))
             Section("Editor")
             Label("Default page style")
