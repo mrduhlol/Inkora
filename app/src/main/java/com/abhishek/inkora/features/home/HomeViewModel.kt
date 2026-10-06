@@ -3,10 +3,15 @@ package com.abhishek.inkora.features.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.abhishek.inkora.data.repository.SettingsRepository
+import com.abhishek.inkora.domain.model.BlockKind
 import com.abhishek.inkora.domain.model.CardDensity
 import com.abhishek.inkora.domain.model.Folder
 import com.abhishek.inkora.domain.model.HomeViewMode
 import com.abhishek.inkora.domain.model.Note
+import com.abhishek.inkora.domain.model.NoteType
+import com.abhishek.inkora.domain.model.RichBlock
+import com.abhishek.inkora.domain.model.RichContent
+import com.abhishek.inkora.domain.model.RichText
 import com.abhishek.inkora.domain.model.SortOrder
 import com.abhishek.inkora.domain.repository.FolderRepository
 import com.abhishek.inkora.domain.repository.NoteRepository
@@ -184,6 +189,26 @@ class HomeViewModel @Inject constructor(
     }
 
     suspend fun createNote(): Long = notes.createBlank()
+
+    suspend fun createNote(type: NoteType): Long = notes.createNote(type)
+
+    /** To-do note: typed TODO with three empty tasks ready for the first keystroke. */
+    suspend fun createTodoNote(): Long {
+        val id = notes.createNote(NoteType.TODO)
+        val existing = notes.getById(id) ?: return id
+        val content = RichText.encode(
+            RichContent(
+                text = "\n\n",
+                blocks = listOf(
+                    RichBlock(0, BlockKind.CHECK),
+                    RichBlock(1, BlockKind.CHECK),
+                    RichBlock(2, BlockKind.CHECK)
+                )
+            )
+        )
+        notes.upsert(existing.copy(content = content, contentFormat = RichText.FORMAT))
+        return id
+    }
 
     suspend fun duplicate(id: Long): Long? = notes.duplicate(id)
 
