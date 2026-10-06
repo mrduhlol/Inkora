@@ -66,7 +66,7 @@ data class RichDoc(
                     val rel = c.spans.mapNotNull {
                         val s = (it.start - lineStart).coerceIn(0, t.length)
                         val e = (it.end - lineStart).coerceIn(0, t.length)
-                        if (s < e) RichSpan(s, e, it.kind) else null
+                        if (s < e) RichSpan(s, e, it.kind, it.sizeSp, it.colorArgb) else null
                     }
                     val relLinks = c.links.mapNotNull {
                         val s = (it.start - lineStart).coerceIn(0, t.length)
@@ -107,7 +107,7 @@ data class RichDoc(
             if (i > 0) sb.append('\n')
             val base = sb.length
             sb.append(l.text)
-            l.spans.forEach { spans.add(RichSpan(base + it.start, base + it.end, it.kind)) }
+            l.spans.forEach { spans.add(RichSpan(base + it.start, base + it.end, it.kind, it.sizeSp, it.colorArgb)) }
             l.links.forEach { links.add(RichLink(base + it.start, base + it.end, it.url)) }
             if (l.block != BlockKind.PARAGRAPH || l.indent != 0) {
                 blocks.add(RichBlock(i, l.block, l.checked, l.indent.coerceIn(0, 4)))
@@ -265,7 +265,7 @@ data class RichDoc(
         return old.spans.mapNotNull {
             val s = it.start.coerceIn(0, newText.length)
             val e = it.end.coerceIn(0, newText.length)
-            if (s < e) RichSpan(s, e, it.kind) else null
+            if (s < e) RichSpan(s, e, it.kind, it.sizeSp, it.colorArgb) else null
         }
     }
 
@@ -507,8 +507,8 @@ data class RichDoc(
         val kept = spans.filterNot { it.kind == kind && it.end > s && it.start < e }.toMutableList()
         if (removeOnly) {
             spans.filter { it.kind == kind && it.end > s && it.start < e }.forEach { sp ->
-                if (sp.start < s) kept.add(RichSpan(sp.start, s, kind))
-                if (sp.end > e) kept.add(RichSpan(e, sp.end, kind))
+                if (sp.start < s) kept.add(sp.copy(start = sp.start, end = s))
+                if (sp.end > e) kept.add(sp.copy(start = e, end = sp.end))
             }
             return kept.sortedWith(compareBy({ it.start }, { it.end }))
         }
