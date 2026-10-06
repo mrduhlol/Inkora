@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.abhishek.inkora.domain.model.AccentColor
 import com.abhishek.inkora.domain.model.AppTheme
 import com.abhishek.inkora.domain.model.CardDensity
+import com.abhishek.inkora.domain.model.DisplaySize
 import com.abhishek.inkora.domain.model.HomeViewMode
 import com.abhishek.inkora.domain.model.PageStyle
 import com.abhishek.inkora.domain.model.PaperBackground
@@ -28,6 +29,7 @@ data class InkoraSettings(
     val gridColumns: Int = 0, // 0 = adaptive
     val viewMode: HomeViewMode = HomeViewMode.GRID,
     val cardDensity: CardDensity = CardDensity.COMFORTABLE,
+    val displaySize: DisplaySize = DisplaySize.DEFAULT,
     val appLock: Boolean = false,
     val hidePreviews: Boolean = false,
     val secureScreenshots: Boolean = false
@@ -48,6 +50,7 @@ class SettingsRepository @Inject constructor(
         val GRID = intPreferencesKey("grid")
         val VIEW = stringPreferencesKey("view_mode")
         val DENSITY = stringPreferencesKey("card_density")
+        val DISPLAY = stringPreferencesKey("display_size")
         val APP_LOCK = stringPreferencesKey("app_lock")
         val HIDE_PREVIEWS = stringPreferencesKey("hide_previews")
         val SECURE_SHOTS = stringPreferencesKey("secure_shots")
@@ -66,6 +69,7 @@ class SettingsRepository @Inject constructor(
             gridColumns = p[K.GRID] ?: 0,
             viewMode = runCatching { HomeViewMode.valueOf(p[K.VIEW] ?: "GRID") }.getOrDefault(HomeViewMode.GRID),
             cardDensity = runCatching { CardDensity.valueOf(p[K.DENSITY] ?: "COMFORTABLE") }.getOrDefault(CardDensity.COMFORTABLE),
+            displaySize = runCatching { DisplaySize.valueOf(p[K.DISPLAY] ?: "DEFAULT") }.getOrDefault(DisplaySize.DEFAULT),
             appLock = (p[K.APP_LOCK] ?: "0") == "1",
             hidePreviews = (p[K.HIDE_PREVIEWS] ?: "0") == "1",
             secureScreenshots = (p[K.SECURE_SHOTS] ?: "0") == "1"
@@ -83,6 +87,7 @@ class SettingsRepository @Inject constructor(
     suspend fun setGrid(v: Int) = store.edit { it[K.GRID] = v.coerceIn(0, 4) }
     suspend fun setViewMode(v: HomeViewMode) = store.edit { it[K.VIEW] = v.name }
     suspend fun setDensity(v: CardDensity) = store.edit { it[K.DENSITY] = v.name }
+    suspend fun setDisplaySize(v: DisplaySize) = store.edit { it[K.DISPLAY] = v.name }
     suspend fun setAppLock(v: Boolean) = store.edit { it[K.APP_LOCK] = if (v) "1" else "0" }
     suspend fun setHidePreviews(v: Boolean) = store.edit { it[K.HIDE_PREVIEWS] = if (v) "1" else "0" }
     suspend fun setSecureScreenshots(v: Boolean) = store.edit { it[K.SECURE_SHOTS] = if (v) "1" else "0" }
