@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
@@ -120,6 +122,22 @@ fun InkoraPaperPreview(
             modifier = Modifier.align(Alignment.TopEnd).size(28.dp),
             paperColor = paper
         )
+        // Note-type identity: text notes carry no badge (no clutter).
+        val typeBadge = when (note.noteType) {
+            com.abhishek.inkora.domain.model.NoteType.HANDWRITING ->
+                Icons.Filled.Edit to "Handwriting note"
+            com.abhishek.inkora.domain.model.NoteType.TODO ->
+                Icons.Filled.CheckBox to "To-do list"
+            else -> null
+        }
+        if (typeBadge != null) {
+            Icon(
+                typeBadge.first,
+                contentDescription = typeBadge.second,
+                tint = muted,
+                modifier = Modifier.align(Alignment.TopStart).padding(10.dp).size(16.dp)
+            )
+        }
         if (note.isFavorite) {
             Icon(
                 Icons.Filled.Star,
