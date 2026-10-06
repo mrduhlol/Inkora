@@ -2,6 +2,7 @@ package com.abhishek.inkora
 
 import com.abhishek.inkora.data.export.ExportAttachment
 import com.abhishek.inkora.data.export.ExportFolder
+import com.abhishek.inkora.data.export.ExportHandwriting
 import com.abhishek.inkora.data.export.ExportNote
 import com.abhishek.inkora.data.export.ExportPayload
 import com.abhishek.inkora.data.export.ExportTag
@@ -23,7 +24,8 @@ class ExportTest {
         attachments = listOf(
             ExportAttachment(0, "img.jpg", "image/jpeg", 10, 10, ""),
             ExportAttachment(1, "doc.pdf", "application/pdf", 0, 0, "", kind = "file", sizeBytes = 42L)
-        )
+        ),
+        handwriting = listOf(ExportHandwriting(0, """{"strokes":[]}"""))
     )
 
     @Test fun roundTrip_preservesEverything() {
@@ -36,6 +38,8 @@ class ExportTest {
         assertEquals(listOf(3L), back.notes[0].tagIds)
         assertEquals("college", back.tags.single().name)
         assertEquals("file", back.attachments.last().kind)
+        assertEquals("text", back.notes[0].noteType)
+        assertEquals(0, back.handwriting.single().noteIndex)
     }
 
     @Test fun v1Backup_stillImports() {
@@ -43,6 +47,14 @@ class ExportTest {
         val back = InkoraExport.decode(v1).getOrThrow()
         assertEquals("Old", back.notes.single().title)
         assertTrue(back.tags.isEmpty())
+        assertEquals("text", back.notes.single().noteType)
+        assertTrue(back.handwriting.isEmpty())
+    }
+
+    @Test fun v2Backup_stillImports() {
+        val v2 = """{"app":"inkora","format":2,"exportedAt":1,"folders":[],"tags":[],"notes":[{"title":"Mid","noteType":"todo"}],"attachments":[]}"""
+        val back = InkoraExport.decode(v2).getOrThrow()
+        assertEquals("todo", back.notes.single().noteType)
     }
 
     @Test fun garbage_isFailureNotCrash() {
