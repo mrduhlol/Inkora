@@ -221,7 +221,7 @@ class RichEditorTest {
     }
 
     @Test fun contentBounds_excludesGeneratedPrefix() {
-        val d = docOf("Apple\nBanana", TextRange(0, 0)).toggleBlock(BlockKind.BULLET)
+        val d = docOf("Apple\nBanana", TextRange(0, 12)).toggleBlock(BlockKind.BULLET)
         // Rendered: "• Apple\n• Banana" — content of line 0 starts after "• ".
         assertEquals(2 to 7, d.contentBounds(0))
         assertEquals(10 to 16, d.contentBounds(1))
