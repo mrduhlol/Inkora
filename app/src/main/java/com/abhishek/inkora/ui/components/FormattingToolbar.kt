@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import com.abhishek.inkora.domain.model.BlockKind
 import com.abhishek.inkora.domain.model.ParaAlign
 import com.abhishek.inkora.domain.model.SpanKind
+import com.abhishek.inkora.ui.theme.scaledDp
 
 /**
  * Two-tier formatting toolbar. The primary row holds the everyday tools
@@ -246,7 +247,7 @@ private fun ToolButton(
         onClick = onClick,
         enabled = enabled,
         modifier = Modifier
-            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .sizeIn(minWidth = scaledDp(48.dp), minHeight = scaledDp(48.dp))
             .semantics { contentDescription = description },
         colors = if (active) IconButtonDefaults.iconButtonColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
