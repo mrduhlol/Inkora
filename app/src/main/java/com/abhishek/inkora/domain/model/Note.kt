@@ -21,6 +21,7 @@ data class Note(
     val isArchived: Boolean = false,
     val isDeleted: Boolean = false,
     val isPinned: Boolean = false,
+    val noteType: NoteType = NoteType.TEXT,
     val folderId: Long? = null,
     val backgroundStyle: String = PageStyle.BLANK.key,
     val backgroundColor: String? = null, // nullable ARGB hex like "#FFF8E7"; null = default for style
