@@ -2,6 +2,7 @@ package com.abhishek.inkora.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PushPin
@@ -64,13 +66,23 @@ fun InkoraPaperPreview(
                 if (selected) MaterialTheme.colorScheme.primaryContainer
                 else Color.Transparent
             )
+            .then(
+                if (selected) Modifier.border(
+                    2.dp,
+                    MaterialTheme.colorScheme.primary,
+                    androidx.compose.foundation.shape.RoundedCornerShape(InkoraTokens.PaperCardRadius)
+                ) else Modifier
+            )
             .combinedClickable(
                 onClick = {
                     if (selecting) onToggleSelect?.invoke(note.id) else onOpen(note.id)
                 },
                 onLongClick = { onToggleSelect?.invoke(note.id) }
             )
-            .semantics { contentDescription = "Open note ${note.title.ifBlank { "untitled" }}" }
+            .semantics {
+                contentDescription = "Open note ${note.title.ifBlank { "untitled" }}"
+                selected = selected
+            }
     ) {
         val bgKey = note.backgroundStyle.ifBlank { "cream" }.let {
             // backgroundStyle doubles as paper color key in V1 for simplicity
@@ -139,6 +151,37 @@ fun InkoraPaperPreview(
             modifier = Modifier.align(Alignment.TopEnd).size(28.dp),
             paperColor = paper
         )
+        // Multi-select identity: accent check badge at the top-start corner
+        // with a matching outline. Animated in; hidden otherwise so the
+        // type badge owns that corner outside selection mode.
+        androidx.compose.animation.AnimatedVisibility(
+            visible = selecting && selected,
+            enter = androidx.compose.animation.scaleIn(
+                animationSpec = androidx.compose.animation.core.tween(150)
+            ) + androidx.compose.animation.fadeIn(
+                animationSpec = androidx.compose.animation.core.tween(150)
+            ),
+            exit = androidx.compose.animation.scaleOut(
+                animationSpec = androidx.compose.animation.core.tween(150)
+            ) + androidx.compose.animation.fadeOut(
+                animationSpec = androidx.compose.animation.core.tween(150)
+            ),
+            modifier = Modifier.align(Alignment.TopStart)
+        ) {
+            Box(
+                Modifier.padding(8.dp).size(24.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(MaterialTheme.colorScheme.primary),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = "Selected",
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
         // Note-type identity: text notes carry no badge (no clutter).
         val typeBadge = when (note.noteType) {
             com.abhishek.inkora.domain.model.NoteType.HANDWRITING ->
