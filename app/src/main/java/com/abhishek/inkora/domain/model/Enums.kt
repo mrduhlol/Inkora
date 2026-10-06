@@ -44,6 +44,24 @@ enum class HomeViewMode(val key: String) { GRID("grid"), LIST("list") }
 
 enum class CardDensity(val key: String) { COMFORTABLE("comfortable"), COMPACT("compact") }
 
+/** App-wide UI scale. Never touches note content — chrome only. */
+enum class DisplaySize(val key: String) {
+    SMALL("small"), DEFAULT("default"), LARGE("large");
+
+    /** Layout multiplier applied to chrome dimensions. */
+    val scale: Float
+        get() = when (this) {
+            SMALL -> 0.9f
+            DEFAULT -> 1f
+            LARGE -> 1.15f
+        }
+
+    companion object {
+        fun fromKey(key: String?): DisplaySize =
+            entries.firstOrNull { it.key == key } ?: DEFAULT
+    }
+}
+
 /** Explicit note kind. Stored per-note; never inferred from content. */
 enum class NoteType(val key: String) {
     TEXT("text"), HANDWRITING("handwriting"), TODO("todo");
