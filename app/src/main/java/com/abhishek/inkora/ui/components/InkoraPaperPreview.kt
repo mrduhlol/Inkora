@@ -80,8 +80,8 @@ fun InkoraPaperPreview(
                 onLongClick = { onToggleSelect?.invoke(note.id) }
             )
             .semantics {
-                contentDescription = "Open note ${note.title.ifBlank { "untitled" }}"
-                this.selected = selected
+                val name = note.title.ifBlank { "untitled" }
+                contentDescription = if (selected) "Open note $name, selected" else "Open note $name"
             }
     ) {
         val bgKey = note.backgroundStyle.ifBlank { "cream" }.let {
