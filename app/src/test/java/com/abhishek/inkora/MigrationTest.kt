@@ -96,7 +96,7 @@ class MigrationTest {
         val name = "mig-v2-v3.db"
         v2File(context, name)
         val db = Room.databaseBuilder(context, InkoraDatabase::class.java, name)
-            .addMigrations(InkoraDatabase.MIGRATION_2_3)
+            .addMigrations(InkoraDatabase.MIGRATION_2_3, InkoraDatabase.MIGRATION_3_4)
             .allowMainThreadQueries()
             .build()
         try {
