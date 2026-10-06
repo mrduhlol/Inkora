@@ -138,6 +138,7 @@ fun EditorScreen(
     var viewer by remember { mutableStateOf<Attachment?>(null) }
     val note = state.note
     val titleFocus = remember { FocusRequester() }
+    val bodyFocus = remember { FocusRequester() }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -157,9 +158,12 @@ fun EditorScreen(
     }
 
     // New blank note: focus the title immediately so creation feels instant.
+    // Fresh to-do notes focus the first task instead — typing starts working.
     val isFresh = note != null && state.title.isBlank() && state.doc.lines.all { it.text.isBlank() }
-    LaunchedEffect(note?.id, isFresh) {
-        if (isFresh) titleFocus.requestFocus()
+    val isFreshTodo = isFresh && note?.noteType == com.abhishek.inkora.domain.model.NoteType.TODO
+    LaunchedEffect(note?.id, isFresh, isFreshTodo) {
+        if (isFreshTodo) bodyFocus.requestFocus()
+        else if (isFresh) titleFocus.requestFocus()
     }
     LaunchedEffect(state.saveError) {
         state.saveError?.let { snackbar.showSnackbar(it); vm.dismissSaveError() }
@@ -331,7 +335,7 @@ fun EditorScreen(
                             value = field,
                             onValueChange = { vm.onBodyInput(it.text, it.selection) },
                             onTextLayout = { layout = it },
-                            modifier = Modifier.fillMaxSize().pointerInput(doc, layout) {
+                            modifier = Modifier.fillMaxSize().focusRequester(bodyFocus).pointerInput(doc, layout) {
                                 awaitEachGesture {
                                     val down = awaitFirstDown(pass = PointerEventPass.Initial)
                                     val lr = layout
