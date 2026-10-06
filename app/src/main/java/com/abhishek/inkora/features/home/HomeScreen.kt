@@ -83,6 +83,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     onOpenNote: (Long) -> Unit,
+    onOpenHandwriting: (Long) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenTrash: () -> Unit,
     onOpenFavorites: () -> Unit,
@@ -94,6 +95,15 @@ fun HomeScreen(
     val tags by vm.allTags.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
+    // Handwriting notes open the canvas; everything else opens the text editor.
+    val openById: (Long) -> Unit = { id ->
+        val note = (state.pinned + state.notes).firstOrNull { it.id == id }
+        if (note?.noteType == com.abhishek.inkora.domain.model.NoteType.HANDWRITING) {
+            onOpenHandwriting(id)
+        } else {
+            onOpenNote(id)
+        }
+    }
     var overflow by remember { mutableStateOf(false) }
     var sortMenu by remember { mutableStateOf(false) }
     var folderDialog by remember { mutableStateOf(false) }
@@ -206,7 +216,7 @@ fun HomeScreen(
                     hideContent = state.hidePreviews,
                     compact = state.density == CardDensity.COMPACT,
                     query = state.query,
-                    onOpen = onOpenNote,
+                    onOpen = openById,
                     onToggleSelect = vm::toggleSelect
                 )
                 else -> NoteSectionsGrid(
@@ -218,7 +228,7 @@ fun HomeScreen(
                     hideContent = state.hidePreviews,
                     compact = state.density == CardDensity.COMPACT,
                     query = state.query,
-                    onOpen = onOpenNote,
+                    onOpen = openById,
                     onToggleFavorite = { id ->
                         (state.pinned + state.notes).firstOrNull { it.id == id }?.let {
                             vm.toggleFavorite(id, it.isFavorite)
