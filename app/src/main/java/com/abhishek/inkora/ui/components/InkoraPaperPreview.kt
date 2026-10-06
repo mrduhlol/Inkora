@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -92,6 +93,14 @@ fun InkoraPaperPreview(
             if (hideContent) "Locked note" else excerpt.ifBlank { "No text yet" },
             query
         )
+        // Handwriting thumbnail: cached file rendered on save, never redrawn
+        // from vectors here — Home stays fast.
+        val context = LocalContext.current
+        val hwThumb = remember(note.id, note.updatedAt, note.noteType) {
+            if (note.noteType == com.abhishek.inkora.domain.model.NoteType.HANDWRITING) {
+                java.io.File(context.filesDir, "thumbs/hw_${note.id}.png").takeIf { it.exists() }
+            } else null
+        }
         InkoraPaperSurface(
             modifier = Modifier.fillMaxWidth().height(if (compact) 132.dp else 190.dp),
             background = bgKey,
@@ -107,15 +116,23 @@ fun InkoraPaperPreview(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(6.dp))
-                Text(
-                    // Privacy mode masks the body so sensitive surfaces
-                    // (recents, shoulders) never leak note content.
-                    text = bodyText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = muted,
-                    maxLines = if (compact) 2 else 5,
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (hwThumb != null && !hideContent) {
+                    LocalImageThumb(
+                        hwThumb,
+                        Modifier.fillMaxWidth().height(if (compact) 64.dp else 96.dp)
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                    )
+                } else {
+                    Text(
+                        // Privacy mode masks the body so sensitive surfaces
+                        // (recents, shoulders) never leak note content.
+                        text = bodyText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = muted,
+                        maxLines = if (compact) 2 else 5,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
         FoldedCorner(
