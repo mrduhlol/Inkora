@@ -217,4 +217,34 @@ class RichTextTest {
         val exited = RichText.enterBlocks(c, 0, lineTextIsBlank = true, newLineCount = 2)
         assertTrue(exited.none { it.line == 0 })
     }
+
+    @Test fun size_setSplitAndClear() {
+        var c = RichContent("Hello World")
+        c = RichText.setSize(c, 0, 11, 20)
+        assertEquals(20, c.spans.single().sizeSp)
+        assertEquals("Hello World", c.text)
+        // Narrowing splits the survivor.
+        c = RichText.setSize(c, 0, 5, 12)
+        assertEquals(2, c.spans.size)
+        assertEquals(12, c.spans.first { it.start == 0 }.sizeSp)
+        assertEquals(20, c.spans.first { it.start == 5 }.sizeSp)
+        c = RichText.clearSize(c, 0, 11)
+        assertTrue(c.spans.none { it.kind == SpanKind.SIZE })
+    }
+
+    @Test fun color_setClearAndRoundTrip() {
+        var c = RichContent("Hi")
+        c = RichText.setColor(c, 0, 2, -65536)
+        assertEquals(-65536, c.spans.single().colorArgb)
+        val back = RichText.decodeOrNull(RichText.encode(c))!!
+        assertEquals(-65536, back.spans.single().colorArgb)
+        c = RichText.clearColor(c, 0, 2)
+        assertTrue(c.spans.isEmpty())
+    }
+
+    @Test fun size_colorNeverTouchText() {
+        val c = RichText.setColor(RichText.setSize(RichContent("abc"), 0, 3, 24), 1, 2, 1)
+        assertEquals("abc", c.text)
+        assertEquals(2, c.spans.size)
+    }
 }
