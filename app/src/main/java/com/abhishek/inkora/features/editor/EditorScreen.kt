@@ -203,8 +203,7 @@ fun EditorScreen(
         val lr = layout ?: return
         val rendered = doc.rendered()
         val li = doc.lineIndexAtRendered(offset)
-        val contentStart = doc.renderedLineStart(rendered, li) + doc.prefixLenAt(li)
-        val contentEnd = contentStart + (doc.lines.getOrNull(li)?.text?.length ?: 0)
+        val (contentStart, contentEnd) = doc.contentBounds(li) ?: return
         when (tapCount) {
             2 -> {
                 val word = lr.getWordBoundary(offset.coerceIn(0, rendered.length))

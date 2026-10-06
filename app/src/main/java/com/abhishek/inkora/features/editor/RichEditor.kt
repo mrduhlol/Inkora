@@ -396,6 +396,17 @@ data class RichDoc(
         return 0
     }
 
+    /**
+     * Rendered-coordinate bounds (start, end-exclusive) of line [li]'s editable
+     * text. Generated prefixes (bullets, numbers, checkboxes, indents) are
+     * excluded so gesture selection never captures glyphs. Null for bad lines.
+     */
+    fun contentBounds(li: Int): Pair<Int, Int>? {
+        val line = lines.getOrNull(li) ?: return null
+        val start = renderedLineStart(rendered(), li) + prefixLenAt(li)
+        return start to start + line.text.length
+    }
+
     fun renderedLineStart(r: String, line: Int): Int {
         var pos = 0
         var cur = 0
