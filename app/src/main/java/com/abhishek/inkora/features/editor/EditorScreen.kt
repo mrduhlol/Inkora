@@ -302,7 +302,11 @@ fun EditorScreen(
                                     }
                                 }
                             },
-                            textStyle = TextStyle(color = ink, fontSize = state.textSizeSp.sp),
+                            textStyle = TextStyle(
+                                color = ink,
+                                fontSize = state.textSizeSp.sp,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Serif
+                            ),
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                             decorationBox = { inner ->
                                 Box {
