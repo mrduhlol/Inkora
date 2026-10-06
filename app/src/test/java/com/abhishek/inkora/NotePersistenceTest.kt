@@ -114,4 +114,13 @@ class NotePersistenceTest {
         repo.deleteTag(tagId)
         assertNotNull(db.noteDao().getById(id))
     }
+
+    @Test fun noteType_defaultsTextAndPersists() = runTest {
+        val id = db.noteDao().upsert(NoteEntity(title = "Plain"))
+        assertEquals("text", db.noteDao().getById(id)!!.noteType)
+        val hw = db.noteDao().upsert(NoteEntity(title = "Sketch", noteType = "handwriting"))
+        assertEquals("handwriting", db.noteDao().getById(hw)!!.noteType)
+        val todo = db.noteDao().upsert(NoteEntity(title = "Tasks", noteType = "todo"))
+        assertEquals("todo", db.noteDao().getById(todo)!!.noteType)
+    }
 }
