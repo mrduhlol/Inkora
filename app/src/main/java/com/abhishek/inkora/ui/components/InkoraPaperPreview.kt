@@ -81,7 +81,7 @@ fun InkoraPaperPreview(
             )
             .semantics {
                 contentDescription = "Open note ${note.title.ifBlank { "untitled" }}"
-                selected = selected
+                this.selected = selected
             }
     ) {
         val bgKey = note.backgroundStyle.ifBlank { "cream" }.let {
