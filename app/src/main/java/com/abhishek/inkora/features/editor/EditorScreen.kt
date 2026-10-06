@@ -70,6 +70,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -133,6 +134,7 @@ fun EditorScreen(
     var tableDialog by remember { mutableStateOf(false) }
     var tableSizeDialog by remember { mutableStateOf(false) }
     var tagDialog by remember { mutableStateOf(false) }
+    var colorDialog by remember { mutableStateOf(false) }
     var viewer by remember { mutableStateOf<Attachment?>(null) }
     val note = state.note
     val titleFocus = remember { FocusRequester() }
@@ -448,6 +450,12 @@ fun EditorScreen(
                 onAlign = vm::cycleAlign,
                 onIndentMore = vm::indentMore,
                 onIndentLess = vm::indentLess,
+                fontSize = doc.activeSize(),
+                baseFontSize = state.textSizeSp,
+                onShrink = { vm.adjustTextSize(-1) },
+                onGrow = { vm.adjustTextSize(1) },
+                fontColor = doc.activeColor(),
+                onColor = { colorDialog = true },
                 modifier = Modifier.navigationBarsPadding().imePadding()
             )
         }
@@ -604,6 +612,21 @@ fun EditorScreen(
                     onCommit = { grid -> vm.setTableCells(group, grid); tableDialog = false }
                 )
             }
+        }
+
+        if (colorDialog) {
+            TextColorDialog(
+                paper = paper,
+                ink = ink,
+                accent = accent,
+                current = doc.activeColor(),
+                onDismiss = { colorDialog = false },
+                onPick = { argb ->
+                    vm.applyColor(argb?.let {
+                        com.abhishek.inkora.ui.theme.guardedTextColor(it, paper).toArgb()
+                    })
+                }
+            )
         }
 
         if (tagDialog && note != null) {
