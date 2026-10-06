@@ -42,6 +42,8 @@ import com.abhishek.inkora.data.local.database.entities.NoteTagCrossRef
 import com.abhishek.inkora.data.repository.AttachmentRepository
 import com.abhishek.inkora.data.repository.AttachmentRepository.AttachmentBackup
 import com.abhishek.inkora.data.repository.DataRepository
+import com.abhishek.inkora.data.repository.HandwritingRepository
+import com.abhishek.inkora.domain.model.HwStroke
 import com.abhishek.inkora.domain.model.Note
 import com.abhishek.inkora.domain.repository.NoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -56,6 +58,7 @@ import kotlinx.coroutines.launch
 class TrashViewModel @Inject constructor(
     private val notes: NoteRepository,
     private val attachments: AttachmentRepository,
+    private val handwriting: HandwritingRepository,
     private val tags: TagDao,
     private val data: DataRepository
 ) : ViewModel() {
@@ -64,26 +67,35 @@ class TrashViewModel @Inject constructor(
     val cleared: StateFlow<Int?> = _cleared
     fun restore(id: Long) = viewModelScope.launch { notes.restore(id) }
 
-    private data class DeletedNote(val note: Note, val files: List<AttachmentBackup>, val tagIds: List<Long>)
+    private data class DeletedNote(
+        val note: Note,
+        val files: List<AttachmentBackup>,
+        val tagIds: List<Long>,
+        val ink: List<HwStroke>
+    )
     private var lastDeleted: DeletedNote? = null
 
     /**
-     * Permanent delete with a real undo window: the note row, tag links and
-     * attachment bytes are cached first. [onDone] reports whether undo is
-     * available (huge attachments skip the cache to protect memory).
+     * Permanent delete with a real undo window: the note row, tag links,
+     * attachment bytes and ink strokes are cached first. [onDone] reports
+     * whether undo is available (huge attachments skip the cache to protect
+     * memory).
      */
     fun deleteForever(id: Long, onDone: (Boolean) -> Unit = {}) = viewModelScope.launch {
         val note = notes.getById(id)
         val files = attachments.snapshotForNote(id)
         if (note != null && files != null) {
             val tagIds = runCatching { tags.listTagsForNote(id).map { it.id } }.getOrDefault(emptyList())
+            val ink = runCatching { handwriting.load(id) }.getOrDefault(emptyList())
             attachments.removeForNote(id)
+            runCatching { handwriting.delete(id) }
             notes.deleteForever(id)
-            lastDeleted = DeletedNote(note, files, tagIds)
+            lastDeleted = DeletedNote(note, files, tagIds, ink)
             onDone(true)
         } else {
             if (note != null) {
                 attachments.removeForNote(id)
+                runCatching { handwriting.delete(id) }
                 notes.deleteForever(id)
             }
             onDone(false)
@@ -97,6 +109,9 @@ class TrashViewModel @Inject constructor(
             val id = notes.upsert(deleted.note.copy(isDeleted = false))
             deleted.files.forEach { attachments.restoreSnapshot(id, it) }
             deleted.tagIds.forEach { runCatching { tags.link(NoteTagCrossRef(id, it)) } }
+            if (deleted.ink.isNotEmpty()) {
+                runCatching { handwriting.save(id, deleted.ink) }
+            }
         }
     }
     fun emptyTrash() = viewModelScope.launch { _cleared.value = data.clearTrash() }
