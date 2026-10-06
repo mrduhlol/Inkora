@@ -176,7 +176,7 @@ data class RichDoc(
                     append(l.text)
                     lineStyleFor(l, codeBg)?.let { addStyle(it, base, base + l.text.length) }
                     l.spans.forEach { s ->
-                        addStyle(styleFor(s.kind), base + s.start, base + s.end)
+                        addStyle(styleForSpan(s), base + s.start, base + s.end)
                     }
                     l.links.forEach { link ->
                         addLink(
@@ -789,4 +789,13 @@ fun styleFor(kind: SpanKind): SpanStyle = when (kind) {
     SpanKind.ITALIC -> SpanStyle(fontStyle = FontStyle.Italic)
     SpanKind.UNDERLINE -> SpanStyle(textDecoration = TextDecoration.Underline)
     SpanKind.STRIKE -> SpanStyle(textDecoration = TextDecoration.LineThrough)
+    SpanKind.SIZE -> SpanStyle()
+    SpanKind.COLOR -> SpanStyle()
+}
+
+/** Full style for a value-carrying span: size in sp, color from ARGB. */
+fun styleForSpan(span: RichSpan): SpanStyle = when (span.kind) {
+    SpanKind.SIZE -> SpanStyle(fontSize = (span.sizeSp ?: 16).coerceIn(10, 32).sp)
+    SpanKind.COLOR -> span.colorArgb?.let { SpanStyle(color = Color(it)) } ?: SpanStyle()
+    else -> styleFor(span.kind)
 }
