@@ -16,6 +16,7 @@ import com.abhishek.inkora.features.archive.ArchiveScreen
 import com.abhishek.inkora.features.editor.EditorScreen
 import com.abhishek.inkora.features.favorites.FavoritesScreen
 import com.abhishek.inkora.features.folders.FoldersScreen
+import com.abhishek.inkora.features.handwriting.HandwritingScreen
 import com.abhishek.inkora.features.home.HomeScreen
 import com.abhishek.inkora.features.lock.AppLockGate
 import com.abhishek.inkora.features.settings.SettingsScreen
@@ -50,6 +51,7 @@ class MainActivity : FragmentActivity() {
                     composable<InkoraRoute.Home> {
                         HomeScreen(
                             onOpenNote = { nav.navigate(InkoraRoute.Editor(it)) },
+                            onOpenHandwriting = { nav.navigate(InkoraRoute.Handwriting(it)) },
                             onOpenSettings = { nav.navigate(InkoraRoute.Settings) },
                             onOpenTrash = { nav.navigate(InkoraRoute.Trash) },
                             onOpenFavorites = { nav.navigate(InkoraRoute.Favorites) },
@@ -60,6 +62,9 @@ class MainActivity : FragmentActivity() {
                     composable<InkoraRoute.Editor> {
                         EditorScreen(onBack = { nav.popBackStack() })
                     }
+                    composable<InkoraRoute.Handwriting> {
+                        HandwritingScreen(onBack = { nav.popBackStack() })
+                    }
                     composable<InkoraRoute.Settings> {
                         SettingsScreen(onBack = { nav.popBackStack() })
                     }
@@ -67,13 +72,21 @@ class MainActivity : FragmentActivity() {
                         TrashScreen(onBack = { nav.popBackStack() })
                     }
                     composable<InkoraRoute.Favorites> {
-                        FavoritesScreen(onBack = { nav.popBackStack() }, onOpen = { nav.navigate(InkoraRoute.Editor(it)) })
+                        FavoritesScreen(
+                            onBack = { nav.popBackStack() },
+                            onOpen = { nav.navigate(InkoraRoute.Editor(it)) },
+                            onOpenHandwriting = { nav.navigate(InkoraRoute.Handwriting(it)) }
+                        )
                     }
                     composable<InkoraRoute.Folders> {
                         FoldersScreen(onBack = { nav.popBackStack() })
                     }
                     composable<InkoraRoute.Archive> {
-                        ArchiveScreen(onBack = { nav.popBackStack() }, onOpen = { nav.navigate(InkoraRoute.Editor(it)) })
+                        ArchiveScreen(
+                            onBack = { nav.popBackStack() },
+                            onOpen = { nav.navigate(InkoraRoute.Editor(it)) },
+                            onOpenHandwriting = { nav.navigate(InkoraRoute.Handwriting(it)) }
+                        )
                     }
                     }
                 }
