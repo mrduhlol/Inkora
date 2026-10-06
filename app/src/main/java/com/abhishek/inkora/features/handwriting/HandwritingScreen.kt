@@ -116,7 +116,7 @@ fun HandwritingScreen(
     var scale by remember { mutableStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
-    var live by remember { mutableStateOf<List<Offset>>(null) }
+    var live by remember { mutableStateOf<List<Offset>?>(null) }
     var liveErase by remember { mutableStateOf(false) }
 
     fun toCanvas(p: Offset): Offset = (p - offset) / scale
