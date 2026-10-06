@@ -3,6 +3,7 @@ package com.abhishek.inkora.data.repository
 import com.abhishek.inkora.data.local.database.NoteDao
 import com.abhishek.inkora.data.local.database.entities.NoteEntity
 import com.abhishek.inkora.domain.model.Note
+import com.abhishek.inkora.domain.model.NoteType
 import com.abhishek.inkora.domain.repository.NoteRepository
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -13,6 +14,7 @@ private fun NoteEntity.toDomain() = Note(
     createdAt = createdAt, updatedAt = updatedAt,
     isFavorite = isFavorite, isArchived = isArchived, isDeleted = isDeleted,
     isPinned = isPinned,
+    noteType = NoteType.fromKey(noteType),
     folderId = folderId, backgroundStyle = backgroundStyle,
     backgroundColor = backgroundColor, textColor = textColor, pageStyle = pageStyle
 )
@@ -23,6 +25,7 @@ private fun Note.toEntity(now: Long = System.currentTimeMillis()) = NoteEntity(
     updatedAt = now,
     isFavorite = isFavorite, isArchived = isArchived, isDeleted = isDeleted,
     isPinned = isPinned,
+    noteType = noteType.key,
     folderId = folderId, backgroundStyle = backgroundStyle,
     backgroundColor = backgroundColor, textColor = textColor, pageStyle = pageStyle
 )
@@ -42,6 +45,8 @@ class NoteRepositoryImpl @Inject constructor(
     override fun searchNotes(query: String): Flow<List<Note>> = dao.search(query).map { it.map(NoteEntity::toDomain) }
     override suspend fun getById(id: Long): Note? = dao.getById(id)?.toDomain()
     override suspend fun createBlank(): Long = dao.upsert(NoteEntity())
+    override suspend fun createNote(type: NoteType): Long =
+        dao.upsert(NoteEntity(noteType = type.key))
     override suspend fun upsert(note: Note): Long = dao.upsert(note.toEntity())
     override suspend fun moveToTrash(id: Long) = dao.moveToTrash(id)
     override suspend fun restore(id: Long) = dao.restore(id)
