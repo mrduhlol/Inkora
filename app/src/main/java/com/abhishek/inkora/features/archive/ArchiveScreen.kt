@@ -49,7 +49,12 @@ class ArchiveViewModel @Inject constructor(private val notes: NoteRepository) : 
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ArchiveScreen(onBack: () -> Unit, onOpen: (Long) -> Unit, vm: ArchiveViewModel = hiltViewModel()) {
+fun ArchiveScreen(
+    onBack: () -> Unit,
+    onOpen: (Long) -> Unit,
+    onOpenHandwriting: (Long) -> Unit = onOpen,
+    vm: ArchiveViewModel = hiltViewModel()
+) {
     val items by vm.items.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
@@ -65,7 +70,13 @@ fun ArchiveScreen(onBack: () -> Unit, onOpen: (Long) -> Unit, vm: ArchiveViewMod
             LazyColumn(Modifier.padding(pad)) {
                 items(items, key = { it.id }) { n ->
                     Row(
-                        Modifier.fillMaxWidth().clickable { onOpen(n.id) }.padding(horizontal = 16.dp, vertical = 10.dp),
+                        Modifier.fillMaxWidth().clickable {
+                            if (n.noteType == com.abhishek.inkora.domain.model.NoteType.HANDWRITING) {
+                                onOpenHandwriting(n.id)
+                            } else {
+                                onOpen(n.id)
+                            }
+                        }.padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
