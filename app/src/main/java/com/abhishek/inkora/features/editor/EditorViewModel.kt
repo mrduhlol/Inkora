@@ -136,6 +136,15 @@ class EditorViewModel @Inject constructor(
         scheduleSave()
     }
 
+    /** Programmatic selection (double/triple-tap handling). Never persists, never saves. */
+    fun setSelection(sel: TextRange) {
+        _state.value = _state.value.copy(doc = _state.value.doc.copy(selection = sel))
+    }
+
+    fun applySize(sizeSp: Int?) = structureOp { it.applySize(sizeSp) }
+
+    fun applyColor(argb: Int?) = structureOp { it.applyColor(argb) }
+
     fun toggleBlock(kind: BlockKind) {
         pushUndo()
         _state.value = _state.value.copy(doc = _state.value.doc.toggleBlock(kind))
