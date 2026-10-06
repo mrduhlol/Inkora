@@ -43,6 +43,7 @@ import com.abhishek.inkora.domain.model.SortOrder
 import com.abhishek.inkora.ui.components.AccentColorSelector
 import com.abhishek.inkora.ui.components.PageStyleSelector
 import com.abhishek.inkora.ui.components.ThemeSelector
+import com.abhishek.inkora.ui.theme.scaledDp
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -90,7 +91,7 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = hiltViewModel()) 
             )
         }
     ) { pad ->
-        Column(Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(20.dp)) {
+        Column(Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(scaledDp(20.dp))) {
             Section("Appearance")
             Label("Theme")
             ThemeSelector(selected = s.theme, onSelect = vm::setTheme)
