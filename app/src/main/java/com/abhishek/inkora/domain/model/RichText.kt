@@ -14,7 +14,7 @@ import kotlinx.serialization.json.Json
  * migrated on open via [migrate] — original text is preserved, markers are
  * converted to spans where safe.
  */
-enum class SpanKind { BOLD, ITALIC, UNDERLINE, STRIKE }
+enum class SpanKind { BOLD, ITALIC, UNDERLINE, STRIKE, SIZE, COLOR }
 
 enum class BlockKind { PARAGRAPH, BULLET, NUMBERED, CHECK, HEADING1, HEADING2, HEADING3, QUOTE, DIVIDER, CODE, TABLE }
 
@@ -24,7 +24,15 @@ enum class ParaAlign { LEFT, CENTER, RIGHT, JUSTIFY }
 const val TABLE_SEP = " │ "
 
 @Serializable
-data class RichSpan(val start: Int, val end: Int, val kind: SpanKind)
+@Serializable
+data class RichSpan(
+    val start: Int,
+    val end: Int,
+    val kind: SpanKind,
+    /** Meaningful only for SIZE (sp) and COLOR (ARGB int). Null = default. */
+    val sizeSp: Int? = null,
+    val colorArgb: Int? = null
+)
 
 @Serializable
 data class RichLink(val start: Int, val end: Int, val url: String)
@@ -88,6 +96,61 @@ object RichText {
 
     fun spansIn(c: RichContent, start: Int, end: Int): List<RichSpan> =
         c.spans.filter { it.end > start && it.start < end }
+
+    // ---------- size / color ops (set semantics: replace overlapping, split survivors) ----------
+
+    /** Body text sizes offered by the editor. */
+    val TEXT_SIZES_SP = listOf(12, 14, 16, 20, 24)
+
+    fun setSize(c: RichContent, start: Int, end: Int, sizeSp: Int): RichContent {
+        val s = start.coerceIn(0, c.text.length)
+        val e = end.coerceIn(0, c.text.length)
+        if (s >= e) return c
+        val kept = c.spans.filterNot { it.kind == SpanKind.SIZE && it.end > s && it.start < e }.toMutableList()
+        c.spans.filter { it.kind == SpanKind.SIZE && it.end > s && it.start < e }.forEach { sp ->
+            if (sp.start < s) kept.add(sp.copy(start = sp.start, end = s))
+            if (sp.end > e) kept.add(sp.copy(start = e, end = sp.end))
+        }
+        kept.add(RichSpan(s, e, SpanKind.SIZE, sizeSp = sizeSp.coerceIn(10, 32)))
+        return c.copy(spans = kept.sortedWith(compareBy({ it.start }, { it.end })))
+    }
+
+    fun clearSize(c: RichContent, start: Int, end: Int): RichContent {
+        val s = start.coerceIn(0, c.text.length)
+        val e = end.coerceIn(0, c.text.length)
+        if (s >= e) return c
+        val kept = c.spans.filterNot { it.kind == SpanKind.SIZE && it.end > s && it.start < e }.toMutableList()
+        c.spans.filter { it.kind == SpanKind.SIZE && it.end > s && it.start < e }.forEach { sp ->
+            if (sp.start < s) kept.add(sp.copy(start = sp.start, end = s))
+            if (sp.end > e) kept.add(sp.copy(start = e, end = sp.end))
+        }
+        return c.copy(spans = kept.sortedWith(compareBy({ it.start }, { it.end })))
+    }
+
+    fun setColor(c: RichContent, start: Int, end: Int, argb: Int): RichContent {
+        val s = start.coerceIn(0, c.text.length)
+        val e = end.coerceIn(0, c.text.length)
+        if (s >= e) return c
+        val kept = c.spans.filterNot { it.kind == SpanKind.COLOR && it.end > s && it.start < e }.toMutableList()
+        c.spans.filter { it.kind == SpanKind.COLOR && it.end > s && it.start < e }.forEach { sp ->
+            if (sp.start < s) kept.add(sp.copy(start = sp.start, end = s))
+            if (sp.end > e) kept.add(sp.copy(start = e, end = sp.end))
+        }
+        kept.add(RichSpan(s, e, SpanKind.COLOR, colorArgb = argb))
+        return c.copy(spans = kept.sortedWith(compareBy({ it.start }, { it.end })))
+    }
+
+    fun clearColor(c: RichContent, start: Int, end: Int): RichContent {
+        val s = start.coerceIn(0, c.text.length)
+        val e = end.coerceIn(0, c.text.length)
+        if (s >= e) return c
+        val kept = c.spans.filterNot { it.kind == SpanKind.COLOR && it.end > s && it.start < e }.toMutableList()
+        c.spans.filter { it.kind == SpanKind.COLOR && it.end > s && it.start < e }.forEach { sp ->
+            if (sp.start < s) kept.add(sp.copy(start = sp.start, end = s))
+            if (sp.end > e) kept.add(sp.copy(start = e, end = sp.end))
+        }
+        return c.copy(spans = kept.sortedWith(compareBy({ it.start }, { it.end })))
+    }
 
     // ---------- link ops ----------
 
