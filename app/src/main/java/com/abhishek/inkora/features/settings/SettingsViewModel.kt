@@ -10,6 +10,7 @@ import com.abhishek.inkora.data.repository.StorageStats
 import com.abhishek.inkora.domain.model.AccentColor
 import com.abhishek.inkora.domain.model.AppTheme
 import com.abhishek.inkora.domain.model.CardDensity
+import com.abhishek.inkora.domain.model.DisplaySize
 import com.abhishek.inkora.domain.model.HomeViewMode
 import com.abhishek.inkora.domain.model.PageStyle
 import com.abhishek.inkora.domain.model.PaperBackground
@@ -47,6 +48,7 @@ class SettingsViewModel @Inject constructor(
     fun setGrid(v: Int) = viewModelScope.launch { repo.setGrid(v) }
     fun setViewMode(v: HomeViewMode) = viewModelScope.launch { repo.setViewMode(v) }
     fun setDensity(v: CardDensity) = viewModelScope.launch { repo.setDensity(v) }
+    fun setDisplaySize(v: DisplaySize) = viewModelScope.launch { repo.setDisplaySize(v) }
     fun setAppLock(v: Boolean) = viewModelScope.launch { repo.setAppLock(v) }
     fun setHidePreviews(v: Boolean) = viewModelScope.launch { repo.setHidePreviews(v) }
     fun setSecureScreenshots(v: Boolean) = viewModelScope.launch { repo.setSecureScreenshots(v) }
