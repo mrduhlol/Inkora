@@ -9,6 +9,8 @@ import com.abhishek.inkora.data.local.database.entities.HandwritingDocEntity
 import com.abhishek.inkora.domain.model.CANVAS_SIZE
 import com.abhishek.inkora.domain.model.HwDoc
 import com.abhishek.inkora.domain.model.HwStroke
+import com.abhishek.inkora.domain.model.decodeHw
+import com.abhishek.inkora.domain.model.encodeHw
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
@@ -17,9 +19,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-
-private val HwJson = Json { ignoreUnknownKeys = true }
 
 /**
  * Handwriting persistence: vector strokes as one JSON row per note plus a
@@ -58,16 +57,11 @@ class HandwritingRepository @Inject constructor(
         runCatching { thumbFile(noteId).delete() }
     }
 
-    fun encode(strokes: List<HwStroke>): String =
-        HwJson.encodeToString(HwDoc.serializer(), HwDoc(strokes))
+    fun encode(strokes: List<HwStroke>): String = encodeHw(strokes)
 
-    fun decodeStrokes(json: String): List<HwStroke> = decode(
-        HandwritingDocEntity(noteId = 0L, strokesJson = json)
-    )
+    fun decodeStrokes(json: String): List<HwStroke> = decodeHw(json)
 
-    private fun decode(entity: HandwritingDocEntity): List<HwStroke> =
-        runCatching { HwJson.decodeFromString(HwDoc.serializer(), entity.strokesJson).strokes }
-            .getOrDefault(emptyList())
+    private fun decode(entity: HandwritingDocEntity): List<HwStroke> = decodeHw(entity.strokesJson)
 
     /** Fit the whole canvas into a 512px box on white: cheap, zoom-independent. */
     private fun renderThumbnail(noteId: Long, strokes: List<HwStroke>) {
