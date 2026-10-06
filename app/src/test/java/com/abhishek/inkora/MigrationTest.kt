@@ -197,10 +197,12 @@ class MigrationTest {
                         db.execSQL(
                             """CREATE TABLE attachments (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                             noteId INTEGER NOT NULL, fileName TEXT NOT NULL, mimeType TEXT NOT NULL,
-                            width INTEGER NOT NULL, height INTEGER NOT NULL,
-                            kind TEXT NOT NULL, sizeBytes INTEGER NOT NULL, createdAt INTEGER NOT NULL,
+                            width INTEGER NOT NULL, height INTEGER NOT NULL, createdAt INTEGER NOT NULL,
+                            kind TEXT NOT NULL, sizeBytes INTEGER NOT NULL,
                             FOREIGN KEY(noteId) REFERENCES notes(id) ON UPDATE NO ACTION ON DELETE CASCADE)"""
                         )
+                        db.execSQL("CREATE INDEX index_attachments_noteId ON attachments(noteId)")
+                        db.execSQL("CREATE INDEX index_note_tags_tagId ON note_tags(tagId)")
                     }
 
                     override fun onUpgrade(db: SupportSQLiteDatabase, old: Int, new: Int) = Unit
