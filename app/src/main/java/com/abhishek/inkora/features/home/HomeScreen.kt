@@ -68,6 +68,7 @@ import com.abhishek.inkora.domain.model.CardDensity
 import com.abhishek.inkora.domain.model.HomeViewMode
 import com.abhishek.inkora.domain.model.Note
 import com.abhishek.inkora.domain.model.SortOrder
+import com.abhishek.inkora.ui.components.CreationMenu
 import com.abhishek.inkora.ui.components.EmptyNotesState
 import com.abhishek.inkora.ui.components.InkoraFab
 import com.abhishek.inkora.ui.components.InkoraPaperPreview
@@ -108,20 +109,50 @@ fun HomeScreen(
     var sortMenu by remember { mutableStateOf(false) }
     var folderDialog by remember { mutableStateOf(false) }
     var templateSheet by remember { mutableStateOf(false) }
+    var creationMenu by remember { mutableStateOf(false) }
 
     BackHandler(enabled = state.selecting) { vm.clearSelection() }
+    BackHandler(enabled = creationMenu) { creationMenu = false }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
             if (!state.selecting) {
-                Box(Modifier.fillMaxWidth().padding(start = 32.dp, end = 16.dp), contentAlignment = Alignment.BottomStart) {
-                    InkoraFab(onClick = {
-                        scope.launch {
-                            val id = vm.createNote()
-                            onOpenNote(id)
-                        }
-                    })
+                Column(
+                    Modifier.fillMaxWidth().padding(start = 32.dp, end = 16.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    CreationMenu(
+                        expanded = creationMenu,
+                        onPickHandwriting = {
+                            creationMenu = false
+                            scope.launch {
+                                val id = vm.createNote(com.abhishek.inkora.domain.model.NoteType.HANDWRITING)
+                                onOpenHandwriting(id)
+                            }
+                        },
+                        onPickText = {
+                            creationMenu = false
+                            scope.launch {
+                                val id = vm.createNote()
+                                onOpenNote(id)
+                            }
+                        },
+                        onPickTodo = {
+                            creationMenu = false
+                            scope.launch {
+                                val id = vm.createTodoNote()
+                                onOpenNote(id)
+                            }
+                        },
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomStart) {
+                        InkoraFab(
+                            onClick = { creationMenu = !creationMenu },
+                            menuOpen = creationMenu
+                        )
+                    }
                 }
             }
         }
