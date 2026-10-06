@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -74,6 +75,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
@@ -174,6 +176,50 @@ fun EditorScreen(
     val field = remember(annotated, doc.selection) { TextFieldValue(annotated, doc.selection) }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val prefixRanges = remember(doc) { doc.prefixRanges() }
+    val viewConfig = LocalViewConfiguration.current
+    var tapCount by remember { mutableStateOf(0) }
+    var lastTapTime by remember { mutableStateOf(0L) }
+    var lastTapOffset by remember { mutableStateOf(-1) }
+
+    /**
+     * Owns multi-tap text selection explicitly: double-tap selects the word,
+     * triple-tap the paragraph — clamped to line content so generated list
+     * glyphs are never selected. Single taps are never consumed, so cursor
+     * placement, copy/cut/paste and the native toolbar stay intact.
+     * Saving is never attached to any tap; autosave owns persistence.
+     */
+    fun handleTextTap(
+        offset: Int,
+        onWord: (androidx.compose.ui.text.TextRange) -> Unit,
+        onParagraph: (androidx.compose.ui.text.TextRange) -> Unit
+    ) {
+        val now = System.currentTimeMillis()
+        tapCount =
+            if (now - lastTapTime < viewConfig.doubleTapTimeoutMillis &&
+                kotlin.math.abs(offset - lastTapOffset) <= viewConfig.touchSlop
+            ) tapCount + 1 else 1
+        lastTapTime = now
+        lastTapOffset = offset
+        val lr = layout ?: return
+        val rendered = doc.rendered()
+        val li = doc.lineIndexAtRendered(offset)
+        val contentStart = doc.renderedLineStart(rendered, li) + doc.prefixLenAt(li)
+        val contentEnd = contentStart + (doc.lines.getOrNull(li)?.text?.length ?: 0)
+        when (tapCount) {
+            2 -> {
+                val word = lr.getWordBoundary(offset.coerceIn(0, rendered.length))
+                val s = maxOf(word.start, contentStart).coerceAtMost(contentEnd)
+                val e = word.end.coerceIn(s, contentEnd)
+                if (e > s) onWord(androidx.compose.ui.text.TextRange(s, e))
+            }
+            3 -> {
+                if (contentEnd > contentStart) {
+                    onParagraph(androidx.compose.ui.text.TextRange(contentStart, contentEnd))
+                }
+                tapCount = 0
+            }
+        }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
@@ -295,9 +341,30 @@ fun EditorScreen(
                                         if (range != null && offset in range &&
                                             doc.lines.getOrNull(li)?.block == BlockKind.CHECK
                                         ) {
+                                            // Checkbox glyph: own the tap immediately so the
+                                            // text field never moves the cursor there.
                                             down.consume()
                                             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             vm.toggleCheck(li)
+                                        } else {
+                                            // Possible double/triple tap: wait for the UP so
+                                            // single taps (cursor placement) stay fully native.
+                                            val up = waitForUpOrCancellation()
+                                            if (up != null) {
+                                                handleTextTap(
+                                                    offset = offset,
+                                                    onWord = { word ->
+                                                        up.consume()
+                                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                        vm.setSelection(word)
+                                                    },
+                                                    onParagraph = { para ->
+                                                        up.consume()
+                                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                        vm.setSelection(para)
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }
