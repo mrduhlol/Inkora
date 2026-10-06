@@ -7,7 +7,6 @@ import android.graphics.Path
 import com.abhishek.inkora.data.local.database.HandwritingDao
 import com.abhishek.inkora.data.local.database.entities.HandwritingDocEntity
 import com.abhishek.inkora.domain.model.CANVAS_SIZE
-import com.abhishek.inkora.domain.model.HwDoc
 import com.abhishek.inkora.domain.model.HwStroke
 import com.abhishek.inkora.domain.model.decodeHw
 import com.abhishek.inkora.domain.model.encodeHw
