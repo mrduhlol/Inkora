@@ -24,6 +24,7 @@ import com.abhishek.inkora.features.settings.SettingsViewModel
 import com.abhishek.inkora.features.trash.TrashScreen
 import com.abhishek.inkora.ui.navigation.InkoraRoute
 import com.abhishek.inkora.ui.theme.InkoraTheme
+import com.abhishek.inkora.ui.theme.LocalUiScale
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -45,6 +46,9 @@ class MainActivity : FragmentActivity() {
                 }
             }
             InkoraTheme(appTheme = s.theme, accent = s.accent, dynamicColor = s.dynamicColor) {
+                androidx.compose.runtime.CompositionLocalProvider(
+                    LocalUiScale provides s.displaySize.scale
+                ) {
                 AppLockGate(enabled = s.appLock, activity = this) {
                     val nav = rememberNavController()
                     NavHost(nav, startDestination = InkoraRoute.Home) {
@@ -90,6 +94,7 @@ class MainActivity : FragmentActivity() {
                     }
                     }
                 }
+            }
             }
         }
     }
