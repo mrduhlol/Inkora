@@ -43,3 +43,13 @@ enum class SortOrder(val key: String) {
 enum class HomeViewMode(val key: String) { GRID("grid"), LIST("list") }
 
 enum class CardDensity(val key: String) { COMFORTABLE("comfortable"), COMPACT("compact") }
+
+/** Explicit note kind. Stored per-note; never inferred from content. */
+enum class NoteType(val key: String) {
+    TEXT("text"), HANDWRITING("handwriting"), TODO("todo");
+
+    companion object {
+        fun fromKey(key: String?): NoteType =
+            entries.firstOrNull { it.key == key } ?: TEXT
+    }
+}
