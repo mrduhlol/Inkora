@@ -5,16 +5,19 @@ import android.graphics.BitmapFactory
 import android.util.Base64
 import com.abhishek.inkora.data.export.ExportAttachment
 import com.abhishek.inkora.data.export.ExportFolder
+import com.abhishek.inkora.data.export.ExportHandwriting
 import com.abhishek.inkora.data.export.ExportNote
 import com.abhishek.inkora.data.export.ExportPayload
 import com.abhishek.inkora.data.export.ExportTag
 import com.abhishek.inkora.data.export.InkoraExport
 import com.abhishek.inkora.data.local.database.AttachmentDao
 import com.abhishek.inkora.data.local.database.FolderDao
+import com.abhishek.inkora.data.local.database.HandwritingDao
 import com.abhishek.inkora.data.local.database.InkoraDatabase
 import com.abhishek.inkora.data.local.database.NoteDao
 import com.abhishek.inkora.data.local.database.TagDao
 import com.abhishek.inkora.data.local.database.entities.FolderEntity
+import com.abhishek.inkora.data.local.database.entities.HandwritingDocEntity
 import com.abhishek.inkora.data.local.database.entities.NoteEntity
 import com.abhishek.inkora.data.local.database.entities.TagEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -51,6 +54,7 @@ class DataRepository @Inject constructor(
     private val folderDao: FolderDao,
     private val attachmentDao: AttachmentDao,
     private val tagDao: TagDao,
+    private val handwritingDao: HandwritingDao,
     private val attachments: AttachmentRepository
 ) {
     suspend fun exportAll(): ByteArray = withContext(Dispatchers.IO) {
@@ -62,8 +66,14 @@ class DataRepository @Inject constructor(
                 n.title, n.content, n.contentFormat, n.createdAt, n.updatedAt,
                 n.isFavorite, n.isArchived, n.isPinned, n.folderId,
                 n.backgroundStyle, n.backgroundColor, n.textColor, n.pageStyle,
-                tagDao.listTagsForNote(n.id).map { it.id }
+                tagDao.listTagsForNote(n.id).map { it.id },
+                n.noteType
             )
+        }
+        val outHandwriting = mutableListOf<ExportHandwriting>()
+        notes.forEachIndexed { index, n ->
+            // Vector strokes only — thumbnails regenerate locally on import.
+            handwritingDao.get(n.id)?.let { outHandwriting.add(ExportHandwriting(index, it.strokesJson)) }
         }
         val outAttachments = mutableListOf<ExportAttachment>()
         notes.forEachIndexed { index, n ->
@@ -91,7 +101,8 @@ class DataRepository @Inject constructor(
             folders = folders.map { ExportFolder(it.id, it.name) },
             tags = tags.map { ExportTag(it.id, it.name) },
             notes = outNotes,
-            attachments = outAttachments
+            attachments = outAttachments,
+            handwriting = outHandwriting
         )
         InkoraExport.encode(payload).toByteArray(Charsets.UTF_8)
     }
@@ -156,6 +167,7 @@ class DataRepository @Inject constructor(
                         isArchived = n.isArchived,
                         isDeleted = false, // imports always land as live new notes
                         isPinned = n.isPinned,
+                        noteType = n.noteType.ifBlank { "text" },
                         folderId = n.folderId?.let { folderRemap[it] },
                         backgroundStyle = n.backgroundStyle,
                         backgroundColor = n.backgroundColor,
@@ -185,6 +197,12 @@ class DataRepository @Inject constructor(
                     attachments.storeBytes(target, a.fileName.takeLast(60), a.mimeType, raw)
                 }
                 images++
+            }.getOrElse { skipped++ }
+        }
+        payload.handwriting.forEach { h ->
+            val target = newIds.getOrNull(h.noteIndex) ?: run { skipped++; return@forEach }
+            runCatching {
+                handwritingDao.upsert(HandwritingDocEntity(target, h.strokesJson))
             }.getOrElse { skipped++ }
         }
         ImportResult(notes, folders, images, skipped)
