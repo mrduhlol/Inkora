@@ -24,7 +24,6 @@ enum class ParaAlign { LEFT, CENTER, RIGHT, JUSTIFY }
 const val TABLE_SEP = " │ "
 
 @Serializable
-@Serializable
 data class RichSpan(
     val start: Int,
     val end: Int,
