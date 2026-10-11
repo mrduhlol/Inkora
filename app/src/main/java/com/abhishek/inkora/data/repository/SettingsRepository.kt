@@ -19,8 +19,8 @@ import kotlinx.coroutines.flow.map
 
 data class InkoraSettings(
     val theme: AppTheme = AppTheme.SYSTEM,
-    val accent: AccentColor = AccentColor.PURPLE,
-    val dynamicColor: Boolean = true,
+    val accent: AccentColor = AccentColor.ORANGE,
+    val dynamicColor: Boolean = false,
     val defaultBackground: PaperBackground = PaperBackground.CREAM,
     val defaultPageStyle: PageStyle = PageStyle.BLANK,
     val defaultTextSizeSp: Int = 16,
@@ -59,8 +59,9 @@ class SettingsRepository @Inject constructor(
     val settings: Flow<InkoraSettings> = store.data.map { p ->
         InkoraSettings(
             theme = runCatching { AppTheme.valueOf(p[K.THEME] ?: "SYSTEM") }.getOrDefault(AppTheme.SYSTEM),
-            accent = runCatching { AccentColor.valueOf(p[K.ACCENT] ?: "PURPLE") }.getOrDefault(AccentColor.PURPLE),
-            dynamicColor = (p[K.DYNAMIC] ?: "1") == "1",
+            accent = runCatching { AccentColor.valueOf(p[K.ACCENT] ?: "ORANGE") }.getOrDefault(AccentColor.ORANGE),
+            // Inkora's own palette is the default look; Material You is opt-in.
+            dynamicColor = (p[K.DYNAMIC] ?: "0") == "1",
             defaultBackground = runCatching { PaperBackground.valueOf(p[K.DEF_BG] ?: "CREAM") }.getOrDefault(PaperBackground.CREAM),
             defaultPageStyle = runCatching { PageStyle.valueOf(p[K.DEF_STYLE] ?: "BLANK") }.getOrDefault(PageStyle.BLANK),
             defaultTextSizeSp = p[K.TEXT_SIZE] ?: 16,

@@ -36,8 +36,9 @@ private val White = Color.White
 private val Black = Color.Black
 
 /**
- * Full seed-derived schemes so the accent drives FAB, switches, checkboxes,
- * selection, dialogs and highlights — not just `primary`. Pure (testable).
+ * v1.7 light scheme: the cream canvas. Surfaces are warm paper tones and the
+ * on-colors read as near-black ink; the accent only drives selection,
+ * controls and highlights — never the desk itself. Pure (testable).
  */
 fun inkoraLightScheme(seed: Color): ColorScheme {
     val onSeed = if (seed.luminance() > 0.55f) Color(0xFF1C1B1F) else White
@@ -49,24 +50,36 @@ fun inkoraLightScheme(seed: Color): ColorScheme {
         onPrimary = onSeed,
         primaryContainer = container,
         onPrimaryContainer = onContainer,
+        inversePrimary = lerp(seed, Black, 0.1f),
         secondary = secondary,
         onSecondary = White,
         secondaryContainer = lerp(seed, White, 0.78f),
         onSecondaryContainer = onContainer,
         tertiary = lerp(seed, Black, 0.28f),
-        surface = Color(0xFFFAF7F0),
-        onSurface = Color(0xFF1C1B1F),
-        surfaceVariant = Color(0xFFE7E0D3),
-        onSurfaceVariant = Color(0xFF4A4640),
-        background = Color(0xFFFAF7F0),
-        onBackground = Color(0xFF1C1B1F),
-        outline = Color(0xFF79767A)
+        surface = CanvasCream,
+        onSurface = PaperInk,
+        surfaceVariant = Color(0xFFE7DBC0),
+        onSurfaceVariant = Color(0xFF5C5443),
+        background = CanvasCream,
+        onBackground = PaperInk,
+        surfaceContainerLowest = White,
+        surfaceContainerLow = Color(0xFFF8F1DF),
+        surfaceContainer = Color(0xFFF5EDDA),
+        surfaceContainerHigh = Color(0xFFEFE5CE),
+        surfaceContainerHighest = Color(0xFFEAE0C7),
+        inverseSurface = PaperInk,
+        inverseOnSurface = PaperLightInk,
+        outline = Color(0xFF8A8172),
+        outlineVariant = Color(0xFFD9CFB6)
     )
 }
 
-/** [amoled] uses true black surfaces; regular dark uses near-black. */
+/**
+ * v1.7 dark scheme: near-black desk ([amoled] uses true black). Warm off-white
+ * ink, neutral warm containers, accent-driven primaries as before.
+ */
 fun inkoraDarkScheme(seed: Color, amoled: Boolean): ColorScheme {
-    val surface = if (amoled) Black else Color(0xFF141318)
+    val surface = if (amoled) Black else CanvasInk
     val onSeed = if (seed.luminance() > 0.55f) Color(0xFF1C1B1F) else White
     val container = lerp(seed, Black, 0.72f)
     val onContainer = lerp(seed, White, 0.82f)
@@ -75,25 +88,34 @@ fun inkoraDarkScheme(seed: Color, amoled: Boolean): ColorScheme {
         onPrimary = onSeed,
         primaryContainer = container,
         onPrimaryContainer = onContainer,
+        inversePrimary = lerp(seed, White, 0.55f),
         secondary = lerp(seed, White, 0.2f),
         secondaryContainer = lerp(seed, Black, 0.6f),
         onSecondaryContainer = onContainer,
         tertiary = lerp(seed, White, 0.35f),
         surface = surface,
-        onSurface = Color(0xFFE8E2D9),
-        surfaceVariant = Color(0xFF49454F),
-        onSurfaceVariant = Color(0xFFCAC4D0),
+        onSurface = Color(0xFFF2EDE1),
+        surfaceVariant = Color(0xFF2A2723),
+        onSurfaceVariant = Color(0xFFC9C2B4),
         background = surface,
-        onBackground = Color(0xFFE8E2D9),
-        outline = Color(0xFF938F99)
+        onBackground = Color(0xFFF2EDE1),
+        surfaceContainerLowest = Black,
+        surfaceContainerLow = Color(0xFF121110),
+        surfaceContainer = Color(0xFF171614),
+        surfaceContainerHigh = Color(0xFF1D1C19),
+        surfaceContainerHighest = Color(0xFF23211E),
+        inverseSurface = Color(0xFFF2EDE1),
+        inverseOnSurface = PaperInk,
+        outline = Color(0xFF7A7367),
+        outlineVariant = Color(0xFF3A372F)
     )
 }
 
 @Composable
 fun InkoraTheme(
     appTheme: AppTheme = AppTheme.SYSTEM,
-    accent: AccentColor = AccentColor.PURPLE,
-    dynamicColor: Boolean = true,
+    accent: AccentColor = AccentColor.ORANGE,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -105,9 +127,9 @@ fun InkoraTheme(
     }
     val seed = accentSeed(accent)
 
-    // Dynamic color follows the OS palette when enabled; otherwise the Inkora
-    // accent fully owns the scheme (page backgrounds stay independent — they
-    // are per-note paper colors, never derived from this scheme).
+    // Dynamic color follows the OS palette only when the user opts in;
+    // otherwise the Inkora palette owns the scheme (page backgrounds stay
+    // independent — they are per-note paper colors, never derived from this).
     val scheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)

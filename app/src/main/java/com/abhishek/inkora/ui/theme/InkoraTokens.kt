@@ -9,11 +9,11 @@ import androidx.compose.ui.unit.dp
  * scattered magic numbers so spacing, radii, depth and motion stay coherent.
  */
 object InkoraTokens {
-    // Corner radii
-    val PaperCardRadius = 14.dp
-    val PaperSwatchRadius = 6.dp
-    val SheetRadius = 8.dp
-    val ControlRadius = 10.dp
+    // Corner radii — v1.7 is rounder: note cards read as soft tiles.
+    val PaperCardRadius = 22.dp
+    val PaperSwatchRadius = 8.dp
+    val SheetRadius = 12.dp
+    val ControlRadius = 14.dp
 
     // Spacing scale
     val SpaceXxs = 2.dp
@@ -30,7 +30,7 @@ object InkoraTokens {
     val PaperTonal = 1.dp
 
     // Grid rhythm
-    val GridGap = 14.dp
+    val GridGap = 16.dp
     val GridPadding = 16.dp
 
     // Motion (subtle, never bouncy)

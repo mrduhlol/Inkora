@@ -5,13 +5,31 @@ import androidx.compose.ui.graphics.luminance
 
 // Centralized design tokens. No hard-coded colors outside this file + Theme.kt.
 
+// Canvas — the desk pages sit on. Vivid paper reads best on a warm cream desk
+// in light mode and a near-black one in dark; v1.7 leans into that contrast.
+val CanvasCream = Color(0xFFF2E8CF)
+val CanvasInk = Color(0xFF0C0B0B)
+
 // Paper surfaces (light)
 val PaperWhite = Color(0xFFFFFFFF)
-val PaperCream = Color(0xFFFAF3E3)
+val PaperCream = Color(0xFFFBF4E4)
 val PaperGray = Color(0xFFF1F0EC)
 val PaperDark = Color(0xFF1E1D1B)
-val PaperInk = Color(0xFF1C1B1F)
-val PaperMuted = Color(0xFF5F5B58)
+val PaperInk = Color(0xFF17130E)
+val PaperMuted = Color(0xFF6B6355)
+val PaperLightInk = Color(0xFFF5F1E6)
+val PaperLightMuted = Color(0xFFB9B2A6)
+
+// Vivid papers — the colored sheets of the v1.7 look.
+val PaperOrange = Color(0xFFF26B3A)
+val PaperYellow = Color(0xFFF7C948)
+val PaperGreen = Color(0xFF84B25E)
+val PaperBlue = Color(0xFFA9C3EC)
+
+// Floating controls — always the same black circle with cream glyphs,
+// outlined on dark canvases so the shape stays readable on black.
+val FabInk = Color(0xFF14110E)
+val FabIcon = Color(0xFFF7F3EA)
 
 // Folded corner + rulings
 val FoldShadow = Color(0xFFD8D2C4)
@@ -25,17 +43,34 @@ fun paperColorFor(background: String, customHex: String?): Color {
         "white" -> PaperWhite
         "gray" -> PaperGray
         "dark" -> PaperDark
+        "orange" -> PaperOrange
+        "yellow" -> PaperYellow
+        "green" -> PaperGreen
+        "blue" -> PaperBlue
         else -> PaperCream
     }
 }
 
-/** Readable ink color for a given paper: dark text on light paper, light text on dark. */
+/** WCAG-style contrast ratio between two colors (1..21). */
+private fun contrastRatio(a: Color, b: Color): Float {
+    val la = a.luminance()
+    val lb = b.luminance()
+    return (maxOf(la, lb) + 0.05f) / (minOf(la, lb) + 0.05f)
+}
+
+/**
+ * Readable ink color for a given paper: picks whichever ink actually
+ * contrasts more. A pure luminance threshold would put white text on the
+ * vivid orange; real contrast prefers the dark ink there.
+ */
 fun onPaperColor(paper: Color): Color =
-    if (paper.luminance() > 0.5f) PaperInk else Color(0xFFF2EEE4)
+    if (contrastRatio(paper, PaperInk) >= contrastRatio(paper, PaperLightInk)) PaperInk
+    else PaperLightInk
 
 /** Muted/placeholder tone with the same contrast rule. */
 fun mutedOnPaperColor(paper: Color): Color =
-    if (paper.luminance() > 0.5f) PaperMuted else Color(0xFFB9B2A6)
+    if (contrastRatio(paper, PaperMuted) >= contrastRatio(paper, PaperLightMuted)) PaperMuted
+    else PaperLightMuted
 
 /**
  * Guard a requested text color against the paper: obviously unreadable

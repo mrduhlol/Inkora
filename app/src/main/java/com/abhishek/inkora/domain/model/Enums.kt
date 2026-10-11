@@ -21,6 +21,10 @@ enum class PaperBackground(val key: String) {
     WHITE("white"),
     CREAM("cream"),
     GRAY("gray"),
+    ORANGE("orange"),
+    YELLOW("yellow"),
+    GREEN("green"),
+    BLUE("blue"),
     DARK("dark"),
     CUSTOM("custom");
 
