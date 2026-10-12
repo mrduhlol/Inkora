@@ -86,7 +86,11 @@ fun InkoraPaperPreview(
     ) {
         val bgKey = note.backgroundStyle.ifBlank { "cream" }.let {
             // backgroundStyle doubles as paper color key in V1 for simplicity
-            when (it) { "white", "gray", "dark", "custom" -> it; else -> "cream" }
+            when (it) {
+                "white", "gray", "dark", "custom",
+                "orange", "yellow", "green", "blue" -> it
+                else -> "cream"
+            }
         }
         val paper = paperColorFor(bgKey, note.backgroundColor)
         val ink = onPaperColor(paper)

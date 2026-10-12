@@ -64,7 +64,11 @@ fun NoteListRow(
     query: String = ""
 ) {
     val bgKey = note.backgroundStyle.ifBlank { "cream" }.let {
-        when (it) { "white", "gray", "dark", "custom" -> it; else -> "cream" }
+        when (it) {
+            "white", "gray", "dark", "custom",
+            "orange", "yellow", "green", "blue" -> it
+            else -> "cream"
+        }
     }
     val paper = paperColorFor(bgKey, note.backgroundColor)
     val excerpt = remember(note.content, note.contentFormat) {

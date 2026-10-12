@@ -94,6 +94,7 @@ private fun CreationOption(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(InkoraTokens.ControlRadius),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 3.dp,
         shadowElevation = 4.dp,
         modifier = Modifier

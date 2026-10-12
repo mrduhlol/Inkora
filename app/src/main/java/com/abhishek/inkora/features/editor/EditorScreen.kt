@@ -40,7 +40,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -94,6 +95,7 @@ import com.abhishek.inkora.domain.model.ParaAlign
 import com.abhishek.inkora.domain.model.SpanKind
 import com.abhishek.inkora.features.draw.DrawDialog
 import com.abhishek.inkora.ui.components.FileCard
+import com.abhishek.inkora.ui.components.InkoraChip
 import com.abhishek.inkora.ui.components.FormattingToolbar
 import com.abhishek.inkora.ui.components.InkoraPaperSurface
 import com.abhishek.inkora.ui.components.InkoraTopBar
@@ -650,16 +652,19 @@ fun EditorScreen(
                         onSelect = { vm.setPageStyle(it) }
                     )
                     Text("Paper", fontSize = 18.sp, modifier = Modifier.padding(top = 16.dp))
-                    Row {
-                        listOf(PaperBackground.WHITE, PaperBackground.CREAM, PaperBackground.GRAY, PaperBackground.DARK)
-                            .forEach { bg ->
-                                FilterChip(
-                                    selected = (note?.backgroundStyle == bg.key.lowercase()),
-                                    onClick = { vm.setPaperBackground(bg) },
-                                    label = { Text(bg.key) },
-                                    modifier = Modifier.padding(end = 8.dp)
-                                )
-                            }
+                    Row(Modifier.horizontalScroll(rememberScrollState())) {
+                        listOf(
+                            PaperBackground.WHITE, PaperBackground.CREAM, PaperBackground.GRAY,
+                            PaperBackground.ORANGE, PaperBackground.YELLOW, PaperBackground.GREEN,
+                            PaperBackground.BLUE, PaperBackground.DARK
+                        ).forEach { bg ->
+                            InkoraChip(
+                                label = bg.key.replaceFirstChar(Char::titlecase),
+                                selected = (note?.backgroundStyle == bg.key.lowercase()),
+                                onClick = { vm.setPaperBackground(bg) },
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                        }
                     }
                 }
             }
