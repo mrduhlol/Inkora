@@ -40,7 +40,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,14 +61,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abhishek.inkora.domain.model.CardDensity
 import com.abhishek.inkora.domain.model.HomeViewMode
 import com.abhishek.inkora.domain.model.Note
 import com.abhishek.inkora.domain.model.SortOrder
+import com.abhishek.inkora.ui.components.CircleIconButton
 import com.abhishek.inkora.ui.components.CreationMenu
 import com.abhishek.inkora.ui.components.EmptyNotesState
+import com.abhishek.inkora.ui.components.InkoraChip
 import com.abhishek.inkora.ui.components.InkoraFab
 import com.abhishek.inkora.ui.components.InkoraPaperPreview
 import com.abhishek.inkora.ui.components.NoteListRow
@@ -231,6 +233,8 @@ fun HomeScreen(
                 filter = state.filter,
                 tagFilterId = state.tagFilterId,
                 tags = tags,
+                allCount = state.pinned.size + state.notes.size,
+                searching = state.isSearching,
                 onFilter = { vm.setFilter(it); if (it != HomeFilter.TAG) Unit },
                 onTag = { vm.setTagFilter(it) },
                 onClearTag = { vm.setTagFilter(null) }
@@ -322,19 +326,29 @@ private fun BrandRow(
     onOpenArchive: () -> Unit
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 14.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("INKORA", style = MaterialTheme.typography.displaySmall, modifier = Modifier.weight(1f))
-        IconButton(onClick = onOpenFavorites) { Icon(Icons.Filled.Favorite, "Favorites") }
-        IconButton(onClick = onOpenFolders) { Icon(Icons.Filled.Folder, "Folders") }
-        IconButton(onClick = onOpenSettings) { Icon(Icons.Filled.Settings, contentDescription = "Settings") }
-        Box {
-            IconButton(onClick = onOverflow) { Icon(Icons.Filled.MoreVert, "More options") }
-            DropdownMenu(expanded = overflowExpanded, onDismissRequest = onOverflowDismiss) {
-                DropdownMenuItem(text = { Text("New from template") }, onClick = { onOverflowDismiss(); onNewFromTemplate() })
-                DropdownMenuItem(text = { Text("Archive") }, onClick = { onOverflowDismiss(); onOpenArchive() })
-                DropdownMenuItem(text = { Text("Trash") }, onClick = { onOverflowDismiss(); onOpenTrash() })
+        Text(
+            "Inkora",
+            style = MaterialTheme.typography.displaySmall,
+            modifier = Modifier.weight(1f),
+            maxLines = 1
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CircleIconButton(Icons.Filled.Favorite, "Favorites", onOpenFavorites)
+            CircleIconButton(Icons.Filled.Folder, "Folders", onOpenFolders)
+            CircleIconButton(Icons.Filled.Settings, "Settings", onOpenSettings)
+            Box {
+                CircleIconButton(Icons.Filled.MoreVert, "More options", onOverflow)
+                DropdownMenu(expanded = overflowExpanded, onDismissRequest = onOverflowDismiss) {
+                    DropdownMenuItem(text = { Text("New from template") }, onClick = { onOverflowDismiss(); onNewFromTemplate() })
+                    DropdownMenuItem(text = { Text("Archive") }, onClick = { onOverflowDismiss(); onOpenArchive() })
+                    DropdownMenuItem(text = { Text("Trash") }, onClick = { onOverflowDismiss(); onOpenTrash() })
+                }
             }
         }
     }
@@ -355,11 +369,12 @@ private fun ControlsRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box {
-            TextButton(onClick = onSortClick) {
-                Icon(Icons.Filled.Sort, null, Modifier.size(18.dp))
-                Spacer(Modifier.size(4.dp))
-                Text(sort)
-            }
+            InkoraChip(
+                label = sort,
+                selected = false,
+                onClick = onSortClick,
+                leadingIcon = Icons.Filled.Sort
+            )
             DropdownMenu(expanded = sortExpanded, onDismissRequest = onSortDismiss) {
                 SortOrder.entries.forEach {
                     DropdownMenuItem(text = { Text(sortName(it)) }, onClick = { onSort(it) })
@@ -367,12 +382,11 @@ private fun ControlsRow(
             }
         }
         Spacer(Modifier.weight(1f))
-        IconButton(onClick = onToggleView) {
-            Icon(
-                if (viewMode == HomeViewMode.GRID) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.GridView,
-                contentDescription = if (viewMode == HomeViewMode.GRID) "List view" else "Grid view"
-            )
-        }
+        CircleIconButton(
+            icon = if (viewMode == HomeViewMode.GRID) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.GridView,
+            contentDescription = if (viewMode == HomeViewMode.GRID) "List view" else "Grid view",
+            onClick = onToggleView
+        )
     }
 }
 
@@ -383,31 +397,38 @@ private fun sortName(o: SortOrder): String = when (o) {
     SortOrder.TITLE_DESC -> "Title Z–A"
 }
 
-/** Single filter chip row: All, Favorites, Pinned, Archived, Images, then tags. */
+/** Single filter chip row: All (with count), Favorites, Pinned, Archived, Images, then tags. */
 @Composable
 private fun FilterRow(
     filter: HomeFilter,
     tagFilterId: Long?,
     tags: List<com.abhishek.inkora.domain.model.Tag>,
+    allCount: Int,
+    searching: Boolean,
     onFilter: (HomeFilter) -> Unit,
     onTag: (Long) -> Unit,
     onClearTag: () -> Unit
 ) {
     Row(
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        FilterChip(selected = filter == HomeFilter.ALL && tagFilterId == null, onClick = { onClearTag(); onFilter(HomeFilter.ALL) }, label = { Text("All") })
-        FilterChip(selected = filter == HomeFilter.FAVORITES, onClick = { onFilter(HomeFilter.FAVORITES) }, label = { Text("Favorites") })
-        FilterChip(selected = filter == HomeFilter.PINNED, onClick = { onFilter(HomeFilter.PINNED) }, label = { Text("Pinned") })
-        FilterChip(selected = filter == HomeFilter.ARCHIVED, onClick = { onFilter(HomeFilter.ARCHIVED) }, label = { Text("Archived") })
-        FilterChip(selected = filter == HomeFilter.WITH_IMAGES, onClick = { onFilter(HomeFilter.WITH_IMAGES) }, label = { Text("Images") })
+        InkoraChip(
+            label = "All",
+            selected = filter == HomeFilter.ALL && tagFilterId == null,
+            onClick = { onClearTag(); onFilter(HomeFilter.ALL) },
+            count = if (!searching && filter == HomeFilter.ALL) allCount else null
+        )
+        InkoraChip(label = "Favorites", selected = filter == HomeFilter.FAVORITES, onClick = { onFilter(HomeFilter.FAVORITES) })
+        InkoraChip(label = "Pinned", selected = filter == HomeFilter.PINNED, onClick = { onFilter(HomeFilter.PINNED) })
+        InkoraChip(label = "Archived", selected = filter == HomeFilter.ARCHIVED, onClick = { onFilter(HomeFilter.ARCHIVED) })
+        InkoraChip(label = "Images", selected = filter == HomeFilter.WITH_IMAGES, onClick = { onFilter(HomeFilter.WITH_IMAGES) })
         tags.forEach { t ->
-            FilterChip(
+            InkoraChip(
+                label = "#${t.name}",
                 selected = tagFilterId == t.id,
-                onClick = { if (tagFilterId == t.id) onClearTag() else onTag(t.id) },
-                label = { Text("#${t.name}") }
+                onClick = { if (tagFilterId == t.id) onClearTag() else onTag(t.id) }
             )
         }
     }
@@ -440,10 +461,10 @@ private fun SelectionBar(
 @Composable
 private fun SectionHeader(title: String) {
     Text(
-        title,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth()
+        title.uppercase(),
+        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.4.sp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp).fillMaxWidth()
     )
 }
 
