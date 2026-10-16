@@ -1,18 +1,19 @@
 # INKORA — a quiet notebook for Android
 
 ![CI](https://github.com/mrduhlol/Inkora/actions/workflows/android.yml/badge.svg)
-![Release](https://img.shields.io/github/v/release/mrduhlol/Inkora?label=version&color=6750A4)
+![Release](https://img.shields.io/github/v/release/mrduhlol/Inkora?label=version&color=F26B3A)
 ![Platform](https://img.shields.io/badge/platform-Android%2026%2B-3DDC84)
 ![Offline](https://img.shields.io/badge/offline-100%25-FAF3E3)
-![Stack](https://img.shields.io/badge/Kotlin_·_Compose_·_Room-6750A4)
+![Stack](https://img.shields.io/badge/Kotlin_·_Compose_·_Room-F26B3A)
 
-> **Home is a clean notebook. Notes are small sheets of paper with a folded
-> corner. Tap one and it opens like a real page — formatted, autosaved, yours.**
+> **Home is a canvas of colored pages. Notes are sheets of paper with a folded
+> corner — orange, yellow, green, blue or plain — and each one opens like a
+> real page: formatted, autosaved, yours.**
 > No account. No cloud. No tracking. Everything stays on your device.
 
 <p align="center">
-  <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.6.apk">
-    <img src="https://img.shields.io/badge/Download_Inkora_v1.3_APK-6750A4?style=for-the-badge&logo=android&logoColor=white" alt="Download Inkora v1.3 APK" />
+  <a href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.7.apk">
+    <img src="https://img.shields.io/badge/Download_Inkora_v1.7_APK-F26B3A?style=for-the-badge&logo=android&logoColor=white" alt="Download Inkora v1.7 APK" />
   </a>
 </p>
 
@@ -21,6 +22,18 @@
 </p>
 
 ---
+
+## New in v1.7
+
+v1.7 is the look — Inkora's boldest visual refresh yet, built around a black-and-cream canvas and vivid paper:
+
+- **New canvas** — warm cream in light, deep near-black in dark, true black in AMOLED. The desk stays quiet; the pages carry the color.
+- **Vivid papers** — four new paper colors (orange, yellow, green, blue) join white, cream, gray and black. Pick one per note from the page-style sheet.
+- **Outfit typeface** — one bundled open font (SIL OFL) for headings, titles and chrome: tight, warm, geometric. Note bodies keep the v1.6 serif for long-form comfort.
+- **Pill chips with counts** — the filter row is now solid-ink pills ("All 23"), and the sort control matches.
+- **Circular controls** — top-bar actions, the view toggle and the + button are soft circles; the + is the reference's big black disc, ringed on dark canvases.
+- **Rounder cards** — roomier corner radii and grid gaps across Home, grid and list.
+- **Inkora by default** — Material You dynamic color is now opt-in; a fresh install shows the Inkora palette.
 
 ## New in v1.6
 
