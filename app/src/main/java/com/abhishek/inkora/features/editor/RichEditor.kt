@@ -260,7 +260,9 @@ data class RichDoc(
             if (ins != null && ins.first < ins.second && !newRendered.substring(ins.first, ins.second).contains('\n')) {
                 doc = doc.addValueSpansAbsolute(ins.first, ins.second, pendingSize, pendingColor)
             }
-            doc = doc.copy(pendingSize = null, pendingColor = null)
+            // Size and color are typing modes, like the toolbar controls in a
+            // word processor: keep them active for every later insertion until
+            // the user explicitly chooses a different value or clears them.
         }
         return doc
     }
