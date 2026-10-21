@@ -1,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Cutouts preserve the heart and spine when Android tints the icon. -->
+    <path
+        android:fillColor="#000000"
+        android:fillType="evenOdd"
+        android:pathData="M42,27 H66 Q75,27 75,36 V72 Q75,81 66,81 H42 Q33,81 33,72 V36 Q33,27 42,27 Z M41,35 Q42,35 42,36 V72 Q42,73 41,73 Q40,73 40,72 V36 Q40,35 41,35 Z M57,61 C54,58 47,53 47,48 C47,42 54,40 57,45 C60,40 67,42 67,48 C67,53 60,58 57,61 Z" />
+</vector>

@@ -3,7 +3,11 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:fillColor="#F2E8CF" android:pathData="M30,20 L62,20 L79,37 L79,84 Q79,88 75,88 L33,88 Q29,88 29,84 L29,24 Q29,20 30,20 Z" />
-    <path android:fillColor="#E87524" android:pathData="M62,20 L62,33 Q62,37 66,37 L79,37 Z" />
-    <path android:fillColor="#171512" android:pathData="M39,48 L68,48 L68,52 L39,52 Z M39,59 L68,59 L68,63 L39,63 Z M39,70 L60,70 L60,74 L39,74 Z" />
+    <!-- A small, rounded notebook with a heart on its cover. -->
+    <path
+        android:fillColor="#D56A57"
+        android:pathData="M42,27 H66 Q75,27 75,36 V72 Q75,81 66,81 H42 Q33,81 33,72 V36 Q33,27 42,27 Z" />
+    <path
+        android:fillColor="#F7EBDD"
+        android:pathData="M41,35 Q42,35 42,36 V72 Q42,73 41,73 Q40,73 40,72 V36 Q40,35 41,35 Z M57,61 C54,58 47,53 47,48 C47,42 54,40 57,45 C60,40 67,42 67,48 C67,53 60,58 57,61 Z" />
 </vector>
