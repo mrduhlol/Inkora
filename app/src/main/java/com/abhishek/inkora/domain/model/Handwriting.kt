@@ -10,7 +10,7 @@ import kotlinx.serialization.json.Json
  */
 const val CANVAS_SIZE = 4096f
 const val MIN_SCALE = 0.1f
-const val MAX_SCALE = 8f
+const val MAX_SCALE = 10f
 
 /** Cap on strokes per note: bounds memory and keeps the canvas smooth. */
 const val MAX_STROKES = 2000

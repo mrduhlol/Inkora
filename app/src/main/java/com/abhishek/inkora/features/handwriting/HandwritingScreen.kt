@@ -41,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,11 +77,13 @@ import com.abhishek.inkora.ui.theme.paperColorFor
 import kotlin.math.abs
 
 /**
- * Handwriting notebook: a large virtual canvas ([CANVAS_SIZE]px square) with
- * pinch-to-zoom, two-finger pan, pen/eraser/pan tools, stroke undo/redo and
- * debounced vector autosave. One finger draws; two fingers navigate; a stylus
- * always draws. Nothing writes to disk per pointer movement — only finished
- * strokes persist.
+ * Handwriting notebook: a large virtual canvas ([CANVAS_SIZE]px square — 4096,
+ * comfortably beyond a 1000-unit desk) with 0.1x–10x pinch zoom, two-finger
+ * pan, pen/eraser/pan tools, stroke undo/redo and debounced vector autosave.
+ * One finger draws; two fingers navigate; a stylus always draws. Opening a
+ * note fits and centers whatever ink already exists. Nothing writes to disk
+ * per pointer movement — only finished strokes persist, and the pending save
+ * is flushed when the screen is left (any back path).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,9 +121,16 @@ fun HandwritingScreen(
     var viewSize by remember { mutableStateOf(IntSize.Zero) }
     var live by remember { mutableStateOf<List<Offset>?>(null) }
     var liveErase by remember { mutableStateOf(false) }
+    var autoFitted by remember { mutableStateOf(false) }
 
     fun toCanvas(p: Offset): Offset = (p - offset) / scale
 
+    /**
+     * Keep at least part of the sheet reachable on screen: the allowed offset
+     * window is the sheet extent minus a 200px margin, swapped when the sheet
+     * is smaller than the view (fully zoomed out). Zooming out never loses the
+     * canvas or its content — it can only shrink toward a visible position.
+     */
     fun clampOffset(s: Float, o: Offset): Offset {
         if (viewSize == IntSize.Zero) return o
         val extent = CANVAS_SIZE * s
@@ -133,6 +143,47 @@ fun HandwritingScreen(
             o.x.coerceIn(minOf(minX, maxX), maxOf(minX, maxX)),
             o.y.coerceIn(minOf(minY, maxY), maxOf(minY, maxY))
         )
+    }
+
+    // Fit-on-open: center whatever ink already exists instead of dropping the
+    // reader on the top-left corner of the 4096px sheet. Runs once per open.
+    LaunchedEffect(state.note, viewSize) {
+        if (state.note == null || viewSize == IntSize.Zero || autoFitted) return@LaunchedEffect
+        autoFitted = true
+        var minX = Float.POSITIVE_INFINITY
+        var minY = Float.POSITIVE_INFINITY
+        var maxX = Float.NEGATIVE_INFINITY
+        var maxY = Float.NEGATIVE_INFINITY
+        for (s in state.strokes) {
+            for (p in s.points) {
+                if (p.x < minX) minX = p.x
+                if (p.y < minY) minY = p.y
+                if (p.x > maxX) maxX = p.x
+                if (p.y > maxY) maxY = p.y
+            }
+        }
+        val vp = viewSize
+        scale = if (minX.isInfinite() || minX >= maxX || minY >= maxY) {
+            1f
+        } else {
+            // Fit the ink with a 48px screen margin; never zoom past 100%.
+            minOf(
+                (vp.width - 48f) / (maxX - minX),
+                (vp.height - 48f) / (maxY - minY)
+            ).coerceIn(MIN_SCALE, 1f)
+        }
+        // Empty or single-dot canvas: sit at 1x on the sheet origin.
+        val cx = if (minX.isInfinite()) 0f else (minX + maxX) / 2f
+        val cy = if (minY.isInfinite()) 0f else (minY + maxY) / 2f
+        offset = clampOffset(
+            scale,
+            Offset(vp.width / 2f - scale * cx, vp.height / 2f - scale * cy)
+        )
+    }
+
+    // Flush pending ink on any leave-navigation, including system/predictive back.
+    DisposableEffect(Unit) {
+        onDispose { vm.flushNow() }
     }
 
     Scaffold(
