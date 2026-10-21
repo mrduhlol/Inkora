@@ -51,6 +51,7 @@ class SettingsViewModel @Inject constructor(
     fun setDisplaySize(v: DisplaySize) = viewModelScope.launch { repo.setDisplaySize(v) }
     fun setAppLock(v: Boolean) = viewModelScope.launch { repo.setAppLock(v) }
     fun setHidePreviews(v: Boolean) = viewModelScope.launch { repo.setHidePreviews(v) }
+    fun setShowArchivedFilter(v: Boolean) = viewModelScope.launch { repo.setShowArchivedFilter(v) }
     fun setSecureScreenshots(v: Boolean) = viewModelScope.launch { repo.setSecureScreenshots(v) }
 
     fun refreshStorage() = viewModelScope.launch {

@@ -52,6 +52,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -112,6 +113,10 @@ fun HomeScreen(
     var folderDialog by remember { mutableStateOf(false) }
     var templateSheet by remember { mutableStateOf(false) }
     var creationMenu by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.showArchivedFilter, state.filter) {
+        if (!state.showArchivedFilter && state.filter == HomeFilter.ARCHIVED) vm.setFilter(HomeFilter.ALL)
+    }
 
     BackHandler(enabled = state.selecting) { vm.clearSelection() }
     BackHandler(enabled = creationMenu) { creationMenu = false }
@@ -235,6 +240,7 @@ fun HomeScreen(
                 tags = tags,
                 allCount = state.pinned.size + state.notes.size,
                 searching = state.isSearching,
+                showArchived = state.showArchivedFilter,
                 onFilter = { vm.setFilter(it); if (it != HomeFilter.TAG) Unit },
                 onTag = { vm.setTagFilter(it) },
                 onClearTag = { vm.setTagFilter(null) }
@@ -405,6 +411,7 @@ private fun FilterRow(
     tags: List<com.abhishek.inkora.domain.model.Tag>,
     allCount: Int,
     searching: Boolean,
+    showArchived: Boolean,
     onFilter: (HomeFilter) -> Unit,
     onTag: (Long) -> Unit,
     onClearTag: () -> Unit
@@ -422,7 +429,9 @@ private fun FilterRow(
         )
         InkoraChip(label = "Favorites", selected = filter == HomeFilter.FAVORITES, onClick = { onFilter(HomeFilter.FAVORITES) })
         InkoraChip(label = "Pinned", selected = filter == HomeFilter.PINNED, onClick = { onFilter(HomeFilter.PINNED) })
-        InkoraChip(label = "Archived", selected = filter == HomeFilter.ARCHIVED, onClick = { onFilter(HomeFilter.ARCHIVED) })
+        if (showArchived) {
+            InkoraChip(label = "Archived", selected = filter == HomeFilter.ARCHIVED, onClick = { onFilter(HomeFilter.ARCHIVED) })
+        }
         InkoraChip(label = "Images", selected = filter == HomeFilter.WITH_IMAGES, onClick = { onFilter(HomeFilter.WITH_IMAGES) })
         tags.forEach { t ->
             InkoraChip(

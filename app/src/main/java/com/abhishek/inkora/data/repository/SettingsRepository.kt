@@ -32,6 +32,7 @@ data class InkoraSettings(
     val displaySize: DisplaySize = DisplaySize.DEFAULT,
     val appLock: Boolean = false,
     val hidePreviews: Boolean = false,
+    val showArchivedFilter: Boolean = false,
     val secureScreenshots: Boolean = false
 )
 
@@ -53,6 +54,7 @@ class SettingsRepository @Inject constructor(
         val DISPLAY = stringPreferencesKey("display_size")
         val APP_LOCK = stringPreferencesKey("app_lock")
         val HIDE_PREVIEWS = stringPreferencesKey("hide_previews")
+        val SHOW_ARCHIVED_FILTER = stringPreferencesKey("show_archived_filter")
         val SECURE_SHOTS = stringPreferencesKey("secure_shots")
     }
 
@@ -73,6 +75,7 @@ class SettingsRepository @Inject constructor(
             displaySize = runCatching { DisplaySize.valueOf(p[K.DISPLAY] ?: "DEFAULT") }.getOrDefault(DisplaySize.DEFAULT),
             appLock = (p[K.APP_LOCK] ?: "0") == "1",
             hidePreviews = (p[K.HIDE_PREVIEWS] ?: "0") == "1",
+            showArchivedFilter = (p[K.SHOW_ARCHIVED_FILTER] ?: "0") == "1",
             secureScreenshots = (p[K.SECURE_SHOTS] ?: "0") == "1"
         )
     }
@@ -91,5 +94,6 @@ class SettingsRepository @Inject constructor(
     suspend fun setDisplaySize(v: DisplaySize) = store.edit { it[K.DISPLAY] = v.name }
     suspend fun setAppLock(v: Boolean) = store.edit { it[K.APP_LOCK] = if (v) "1" else "0" }
     suspend fun setHidePreviews(v: Boolean) = store.edit { it[K.HIDE_PREVIEWS] = if (v) "1" else "0" }
+    suspend fun setShowArchivedFilter(v: Boolean) = store.edit { it[K.SHOW_ARCHIVED_FILTER] = if (v) "1" else "0" }
     suspend fun setSecureScreenshots(v: Boolean) = store.edit { it[K.SECURE_SHOTS] = if (v) "1" else "0" }
 }

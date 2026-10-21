@@ -46,7 +46,8 @@ data class HomeUiState(
     val tagFilterId: Long? = null,
     val isSearching: Boolean = false,
     val selection: Set<Long> = emptySet(),
-    val folders: List<Folder> = emptyList()
+    val folders: List<Folder> = emptyList(),
+    val showArchivedFilter: Boolean = false
 ) {
     val selecting: Boolean get() = selection.isNotEmpty()
 }
@@ -104,7 +105,7 @@ class HomeViewModel @Inject constructor(
                     HomeUiState(
                         pinned, rest, "", settings.viewMode, settings.sortOrder,
                         settings.gridColumns, settings.cardDensity, settings.hidePreviews,
-                        f, null, false, sel, folderList
+                        f, null, false, sel, folderList, settings.showArchivedFilter
                     )
                 )
             } else if (tagId != null && q.isBlank()) {
@@ -113,7 +114,7 @@ class HomeViewModel @Inject constructor(
                     HomeUiState(
                         pinned, rest, q, s.viewMode, s.sortOrder,
                         s.gridColumns, s.cardDensity, s.hidePreviews,
-                        f, tagId, true, sel, folderList
+                        f, tagId, true, sel, folderList, s.showArchivedFilter
                     )
                 }
             } else {
@@ -123,7 +124,7 @@ class HomeViewModel @Inject constructor(
                     HomeUiState(
                         pinned, rest, q, s.viewMode, s.sortOrder,
                         s.gridColumns, s.cardDensity, s.hidePreviews,
-                        f, tagId, true, sel, folderList
+                        f, tagId, true, sel, folderList, s.showArchivedFilter
                     )
                 }
             }

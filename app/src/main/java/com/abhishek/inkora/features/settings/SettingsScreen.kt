@@ -147,6 +147,9 @@ fun SettingsScreen(onBack: () -> Unit, vm: SettingsViewModel = hiltViewModel()) 
                     )
                 }
             }
+            SettingRow("Show Archived on Home", "Show the Archived filter in the Home filter row") {
+                Switch(checked = s.showArchivedFilter, onCheckedChange = vm::setShowArchivedFilter)
+            }
             HorizontalDivider(Modifier.padding(vertical = 20.dp))
             Section("Privacy")
             SettingRow("App lock", "Require your device screen lock to open Inkora") {
