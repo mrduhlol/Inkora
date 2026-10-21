@@ -42,7 +42,13 @@ data class ExportAttachment(
     val dataBase64: String = "",
     /** "image" or "file". Defaults to image so v1 backups still restore. */
     val kind: String = "image",
-    val sizeBytes: Long = 0L
+    val sizeBytes: Long = 0L,
+    /**
+     * Original attachment id (0 when unknown). Inline images point at an
+     * attachment id, which changes on import — this maps the old id to the
+     * new one so the pictures stay in place.
+     */
+    val sourceId: Long = 0L
 )
 
 @Serializable

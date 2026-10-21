@@ -20,6 +20,22 @@ enum class BlockKind { PARAGRAPH, BULLET, NUMBERED, CHECK, HEADING1, HEADING2, H
 
 enum class ParaAlign { LEFT, CENTER, RIGHT, JUSTIFY }
 
+/**
+ * How an inline image sits relative to the text around it.
+ *
+ * INLINE  – the image occupies the text flow (its own block in the paragraph).
+ * BEHIND  – the image floats under the text of its line.
+ * IN_FRONT– the image floats over the text of its line.
+ */
+enum class ImagePlacement { INLINE, BEHIND, IN_FRONT }
+
+/**
+ * Placeholder character that anchors an inline image inside the note text.
+ * It is a real character in the text (never markup the user types) so the
+ * image keeps a stable position while the note is edited.
+ */
+const val IMAGE_PLACEHOLDER = "\uFFFC"
+
 /** Table cell separator. A visible box-drawing glyph (not markup): it draws the grid. */
 const val TABLE_SEP = " │ "
 
@@ -42,13 +58,30 @@ data class RichBlock(val line: Int, val kind: BlockKind, val checked: Boolean = 
 @Serializable
 data class RichAlign(val line: Int, val align: ParaAlign)
 
+/**
+ * An inline image anchored in the note.
+ *
+ * [line] is the index of the line that holds the [IMAGE_PLACEHOLDER] character;
+ * [anchor] is the character offset of that placeholder inside the line text.
+ * [attachmentId] points at the app-private attachment row that holds the file.
+ */
+@Serializable
+data class RichImage(
+    val line: Int,
+    val attachmentId: Long,
+    val placement: ImagePlacement = ImagePlacement.INLINE,
+    val anchor: Int = 0
+)
+
 @Serializable
 data class RichContent(
     val text: String = "",
     val spans: List<RichSpan> = emptyList(),
     val blocks: List<RichBlock> = emptyList(),
     val aligns: List<RichAlign> = emptyList(),
-    val links: List<RichLink> = emptyList()
+    val links: List<RichLink> = emptyList(),
+    /** Inline images. Empty for notes written before inline images existed. */
+    val images: List<RichImage> = emptyList()
 )
 
 private val RichJson = Json { ignoreUnknownKeys = true }
@@ -281,6 +314,23 @@ object RichText {
         }.take(newLineCount).sortedBy { it.line }
     }
 
+    // ---------- inline images ----------
+
+    /**
+     * Rewrite inline image attachment ids through [remap] (old id -> new id).
+     * Used after a backup import, where attachment rows get fresh ids.
+     * Images whose id is not in the map are dropped — a dangling reference
+     * would render as a broken image forever.
+     */
+    fun remapImageIds(c: RichContent, remap: Map<Long, Long>): RichContent {
+        if (c.images.isEmpty()) return c
+        val kept = c.images.mapNotNull { img ->
+            val newId = remap[img.attachmentId] ?: return@mapNotNull null
+            if (newId == img.attachmentId) img else img.copy(attachmentId = newId)
+        }
+        return c.copy(images = kept)
+    }
+
     // ---------- table helpers ----------
 
     /** Split a TABLE row line into cells. Separator is structural, never markup. */
@@ -315,7 +365,11 @@ object RichText {
         val clean = if (format == FORMAT) {
             decodeOrNull(rawContent)?.text ?: stripSyntax(rawContent)
         } else stripSyntax(rawContent)
-        return clean.lines().firstOrNull { it.isNotBlank() }?.trim()?.take(80) ?: ""
+        // A note that starts with a picture still needs a readable title.
+        return clean.lines()
+            .map { it.replace(IMAGE_PLACEHOLDER, "").trim() }
+            .firstOrNull { it.isNotBlank() }
+            ?.take(80) ?: ""
     }
 
     /** Clean human-readable text with real glyphs (•, 1., ☐/☑) — no markers. */
@@ -324,15 +378,16 @@ object RichText {
         var n = 0
         return lines.mapIndexed { i, l ->
             val b = blockAt(c, i)
-            val indented = "  ".repeat(b.indent.coerceIn(0, 4)) + l
+            val body = l.replace(IMAGE_PLACEHOLDER, "[image]")
+            val indented = "  ".repeat(b.indent.coerceIn(0, 4)) + body
             when (b.kind) {
                 BlockKind.BULLET -> "• $indented"
                 BlockKind.NUMBERED -> { n += 1; "$n. $indented" }
                 BlockKind.CHECK -> (if (b.checked) "☑ " else "☐ ") + indented
-                BlockKind.QUOTE -> "“$l”"
+                BlockKind.QUOTE -> "“$body”"
                 BlockKind.DIVIDER -> "──────────"
-                BlockKind.CODE -> l
-                BlockKind.TABLE -> l
+                BlockKind.CODE -> body
+                BlockKind.TABLE -> body
                 else -> indented
             }
         }.joinToString("\n").also { }

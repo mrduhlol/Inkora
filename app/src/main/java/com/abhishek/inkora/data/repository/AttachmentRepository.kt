@@ -170,6 +170,8 @@ class AttachmentRepository @Inject constructor(
 
     /** Full fidelity copy of a note's attachments for undo. Null when too big. */
     data class AttachmentBackup(
+        /** Original attachment id — inline image references point at it. */
+        val id: Long,
         val fileName: String,
         val mimeType: String,
         val kind: String,
@@ -187,13 +189,14 @@ class AttachmentRepository @Inject constructor(
                 val bytes = runCatching { fileFor(e).readBytes() }.getOrNull() ?: continue
                 total += bytes.size
                 if (total > maxTotal) return@withContext null
-                out.add(AttachmentBackup(e.fileName, e.mimeType, e.kind, e.width, e.height, bytes))
+                out.add(AttachmentBackup(e.id, e.fileName, e.mimeType, e.kind, e.width, e.height, bytes))
             }
             out
         }
 
-    suspend fun restoreSnapshot(noteId: Long, backup: AttachmentBackup) {
-        if (backup.kind == "file") {
+    /** Restore a backed-up attachment. Returns the id of the new row. */
+    suspend fun restoreSnapshot(noteId: Long, backup: AttachmentBackup): Long {
+        return if (backup.kind == "file") {
             storeFileBytes(noteId, backup.fileName, backup.mimeType, backup.bytes)
         } else {
             storeBytes(noteId, backup.fileName, backup.mimeType, backup.bytes)

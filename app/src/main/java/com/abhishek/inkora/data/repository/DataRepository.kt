@@ -20,6 +20,7 @@ import com.abhishek.inkora.data.local.database.entities.FolderEntity
 import com.abhishek.inkora.data.local.database.entities.HandwritingDocEntity
 import com.abhishek.inkora.data.local.database.entities.NoteEntity
 import com.abhishek.inkora.data.local.database.entities.TagEntity
+import com.abhishek.inkora.domain.model.RichText
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
@@ -92,7 +93,10 @@ class DataRepository @Inject constructor(
                         height = a.height,
                         dataBase64 = capped?.let { Base64.encodeToString(it, Base64.NO_WRAP) } ?: "",
                         kind = a.kind,
-                        sizeBytes = a.sizeBytes
+                        sizeBytes = a.sizeBytes,
+                        // Inline images reference the attachment id: keep it so
+                        // the import can point them at the restored rows.
+                        sourceId = a.id
                     )
                 )
             }
@@ -187,18 +191,35 @@ class DataRepository @Inject constructor(
                 notes++
             }.getOrElse { skipped++ }
         }
+        val attachmentRemap = mutableMapOf<Long, Long>()
         payload.attachments.forEach { a ->
             val target = newIds.getOrNull(a.noteIndex) ?: run { skipped++; return@forEach }
             if (a.dataBase64.isBlank()) { skipped++; return@forEach }
             runCatching {
                 val raw = Base64.decode(a.dataBase64, Base64.DEFAULT)
-                if (a.kind == "file") {
+                val newId = if (a.kind == "file") {
                     attachments.storeFileBytes(target, a.fileName.takeLast(60), a.mimeType, raw)
                 } else {
                     attachments.storeBytes(target, a.fileName.takeLast(60), a.mimeType, raw)
                 }
+                if (a.sourceId != 0L) attachmentRemap[a.sourceId] = newId
                 images++
             }.getOrElse { skipped++ }
+        }
+        // Inline images point at attachment ids, and those ids change on
+        // import: rewrite the references so the pictures stay in place.
+        if (attachmentRemap.isNotEmpty()) {
+            payload.notes.forEachIndexed { index, n ->
+                val target = newIds.getOrNull(index) ?: return@forEachIndexed
+                val rich = RichText.decodeOrNull(n.content) ?: return@forEachIndexed
+                if (rich.images.isEmpty()) return@forEachIndexed
+                val remapped = RichText.remapImageIds(rich, attachmentRemap)
+                if (remapped == rich) return@forEachIndexed
+                runCatching {
+                    val row = noteDao.getById(target) ?: return@runCatching
+                    noteDao.upsert(row.copy(content = RichText.encode(remapped)))
+                }
+            }
         }
         payload.handwriting.forEach { h ->
             val target = newIds.getOrNull(h.noteIndex) ?: run { skipped++; return@forEach }

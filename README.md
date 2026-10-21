@@ -133,6 +133,8 @@ v1.1 rebuilds the editor around real rich text and fixes the most-reported v1.0 
 
 **Paper, your way.** Backgrounds — white, cream, gray, dark (plus custom hex) — crossed with styles — blank, ruled, grid, dotted. Each note remembers its own paper on Home and in the editor, independent of the app theme.
 
+**An editor that keeps its promises.** Double-tap picks the word, triple-tap the paragraph — the field never drags the caret away from the selection. A text size you choose stays in force for everything you type next, until you pick another one. Pictures land inline at the caret and stay part of the note: tap one to select it, then move it into the flow, behind the text or in front of it. Inline pictures are stored in the note itself, so they survive restarts, backups and imports.
+
 **Calm theming.** System, Light, Dark and true-black AMOLED, seven accents, Material 3 with optional dynamic color that never hijacks Inkora's identity.
 
 **Fully offline.** Create, format, trash, restore, favorite, archive, search and file notes with airplane mode on. Notes survive app kill, force-stop and reboot via Room.

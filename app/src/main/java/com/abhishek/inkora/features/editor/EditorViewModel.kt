@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.abhishek.inkora.data.repository.AttachmentRepository
 import com.abhishek.inkora.data.repository.SettingsRepository
 import com.abhishek.inkora.domain.model.BlockKind
+import com.abhishek.inkora.domain.model.ImagePlacement
 import com.abhishek.inkora.domain.model.Note
 import com.abhishek.inkora.domain.model.PageStyle
 import com.abhishek.inkora.domain.model.PaperBackground
@@ -321,15 +322,25 @@ class EditorViewModel @Inject constructor(
 
     // ---------- attachments (app-private files, Room metadata) ----------
 
+    /**
+     * Pick an image: it is stored as an attachment AND inserted inline at the
+     * caret, so the picture shows up where the user is writing.
+     */
     fun addImage(uri: Uri) {
         viewModelScope.launch {
             val id = attachmentsRepo.add(noteId, uri)
             if (id == null) {
                 _state.value = _state.value.copy(saveError = "Couldn't add that image — try another file")
             } else {
+                insertInlineImage(id)
                 scheduleSave() // bump updatedAt so the note resurfaces
             }
         }
+    }
+
+    /** Insert an already stored attachment inline at the caret. */
+    private fun insertInlineImage(attachmentId: Long) {
+        structureOp { it.insertImage(attachmentId) }
     }
 
     fun addDrawing(png: ByteArray) {
@@ -338,10 +349,33 @@ class EditorViewModel @Inject constructor(
                 attachmentsRepo.storeBytes(noteId, "drawing-${System.currentTimeMillis()}.png", "image/png", png)
             }.onFailure {
                 _state.value = _state.value.copy(saveError = "Couldn't save drawing")
-            }.onSuccess {
+            }.onSuccess { id ->
+                insertInlineImage(id)
                 scheduleSave()
             }
         }
+    }
+
+    /** Change how the image at the caret sits relative to the text. */
+    fun setImagePlacement(placement: ImagePlacement) {
+        val line = _state.value.doc.imageLineAtCaret() ?: return
+        structureOp { it.setImagePlacement(line, placement) }
+    }
+
+    /** Remove the image at the caret: placeholder and file. */
+    fun removeImageAtCaret() {
+        val doc = _state.value.doc
+        val line = doc.imageLineAtCaret() ?: return
+        val attachmentId = doc.lines.getOrNull(line)?.image?.attachmentId
+        structureOp { it.removeImage(line) }
+        if (attachmentId != null) {
+            viewModelScope.launch { attachmentsRepo.remove(attachmentId) }
+        }
+    }
+
+    /** Put the caret on the image of [line] (the picture itself was tapped). */
+    fun selectImage(line: Int) {
+        _state.value = _state.value.copy(doc = _state.value.doc.selectImage(line))
     }
 
     fun removeImage(id: Long) {

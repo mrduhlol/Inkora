@@ -1,14 +1,15 @@
 package com.abhishek.inkora.features.editor
 
 import android.content.Intent
+import android.os.SystemClock
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -67,21 +69,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -90,6 +96,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abhishek.inkora.data.repository.Attachment
 import com.abhishek.inkora.domain.model.BlockKind
+import com.abhishek.inkora.domain.model.ImagePlacement
 import com.abhishek.inkora.domain.model.PageStyle
 import com.abhishek.inkora.domain.model.PaperBackground
 import com.abhishek.inkora.domain.model.ParaAlign
@@ -107,6 +114,7 @@ import com.abhishek.inkora.ui.components.TagChip
 import com.abhishek.inkora.ui.theme.mutedOnPaperColor
 import com.abhishek.inkora.ui.theme.onPaperColor
 import com.abhishek.inkora.ui.theme.paperColorFor
+import java.io.File
 import kotlinx.coroutines.launch
 
 /**
@@ -186,48 +194,37 @@ fun EditorScreen(
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val prefixRanges = remember(doc) { doc.prefixRanges() }
     val viewConfig = LocalViewConfiguration.current
-    var tapCount by remember { mutableStateOf(0) }
-    var lastTapTime by remember { mutableStateOf(0L) }
-    var lastTapPosition by remember { mutableStateOf<Offset?>(null) }
+    val taps = remember { TapTracker() }
+
+    // Inline images: where their placeholder sits in the rendered text and
+    // which attachment holds the file.
+    val imageAnchors = remember(doc) { doc.imageAnchors() }
+    val attachmentsById = remember(attachments) { attachments.associateBy { it.id } }
+    val selectedImageLine = doc.imageLineAtCaret()
+    val selectedImage = doc.imageAtCaret()
 
     /**
      * Owns multi-tap text selection explicitly: double-tap selects the word,
      * triple-tap the paragraph — clamped to line content so generated list
-     * glyphs are never selected. Single taps are never consumed, so cursor
-     * placement, copy/cut/paste and the native toolbar stay intact.
+     * glyphs are never selected. The repeated tap is consumed in the Initial
+     * pass, so the text field never moves the caret over the selection made
+     * here. Single taps are never consumed, so cursor placement, copy/cut/
+     * paste and the native toolbar stay intact.
      * Saving is never attached to any tap; autosave owns persistence.
      */
-    fun handleTextTap(
-        offset: Int,
-        position: Offset,
-        onWord: (androidx.compose.ui.text.TextRange) -> Unit,
-        onParagraph: (androidx.compose.ui.text.TextRange) -> Unit
-    ) {
-        val now = System.currentTimeMillis()
-        tapCount =
-            if (now - lastTapTime < viewConfig.doubleTapTimeoutMillis &&
-                lastTapPosition?.let { (position - it).getDistance() <= viewConfig.touchSlop } == true
-            ) tapCount + 1 else 1
-        lastTapTime = now
-        lastTapPosition = position
-        val lr = layout ?: return
-        val rendered = doc.rendered()
+    fun selectByTap(offset: Int, tapCount: Int, lr: TextLayoutResult): Boolean {
         val li = doc.lineIndexAtRendered(offset)
-        val (contentStart, contentEnd) = doc.contentBounds(li) ?: return
-        when (tapCount) {
-            2 -> {
-                val word = lr.getWordBoundary(offset.coerceIn(0, rendered.length))
-                val s = maxOf(word.start, contentStart).coerceAtMost(contentEnd)
-                val e = word.end.coerceIn(s, contentEnd)
-                if (e > s) onWord(androidx.compose.ui.text.TextRange(s, e))
+        val range = when {
+            tapCount >= 3 -> doc.contentBounds(li)?.let { TextRange(it.first, it.second) }
+            else -> {
+                val text = doc.rendered()
+                val boundary = lr.getWordBoundary(offset.coerceIn(0, text.length))
+                doc.wordRangeAt(offset, boundary.start, boundary.end)
             }
-            3 -> {
-                if (contentEnd > contentStart) {
-                    onParagraph(androidx.compose.ui.text.TextRange(contentStart, contentEnd))
-                }
-                tapCount = 0
-            }
-        }
+        } ?: return false
+        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        vm.setSelection(range)
+        return true
     }
 
     Scaffold(
@@ -356,24 +353,26 @@ fun EditorScreen(
                                             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             vm.toggleCheck(li)
                                         } else {
-                                            // Possible double/triple tap: wait for the UP so
-                                            // single taps (cursor placement) stay fully native.
-                                            val up = waitForUpOrCancellation()
-                                            if (up != null) {
-                                                handleTextTap(
-                                                    offset = offset,
-                                                    position = down.position,
-                                                    onWord = { word ->
-                                                        up.consume()
-                                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                        vm.setSelection(word)
-                                                    },
-                                                    onParagraph = { para ->
-                                                        up.consume()
-                                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                        vm.setSelection(para)
-                                                    }
-                                                )
+                                            val now = SystemClock.uptimeMillis()
+                                            // Distance is measured on screen
+                                            // (pixels), not in characters.
+                                            val dx = down.position.x - taps.x
+                                            val dy = down.position.y - taps.y
+                                            val slop = viewConfig.touchSlop
+                                            val repeated = taps.count > 0 &&
+                                                now - taps.time < viewConfig.doubleTapTimeoutMillis &&
+                                                (dx * dx + dy * dy) <= slop * slop
+                                            taps.count = if (repeated) taps.count + 1 else 1
+                                            taps.time = now
+                                            taps.x = down.position.x
+                                            taps.y = down.position.y
+                                            if (taps.count >= 2) {
+                                                // Second (or third) tap: consume the down in
+                                                // the Initial pass so the text field keeps
+                                                // the word/paragraph selection made here.
+                                                down.consume()
+                                                selectByTap(offset, taps.count, lr)
+                                                if (taps.count >= 3) taps.count = 0
                                             }
                                         }
                                     }
@@ -386,11 +385,41 @@ fun EditorScreen(
                             ),
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                             decorationBox = { inner ->
-                                Box {
+                                Box(Modifier.fillMaxSize()) {
+                                    // Pictures that float behind the text are painted
+                                    // first, so the words stay readable on top.
+                                    InlineImageLayer(
+                                        anchors = imageAnchors,
+                                        layout = layout,
+                                        attachments = attachmentsById,
+                                        selectedLine = selectedImageLine,
+                                        layer = ImageLayer.BEHIND_PAINT,
+                                        onSelect = vm::selectImage
+                                    )
                                     if (field.text.isEmpty()) {
                                         Text("Start writing…", color = muted, fontSize = state.textSizeSp.sp)
                                     }
                                     inner()
+                                    // A floating picture sits under the text, so it needs
+                                    // an invisible target on top to stay selectable.
+                                    InlineImageLayer(
+                                        anchors = imageAnchors,
+                                        layout = layout,
+                                        attachments = attachmentsById,
+                                        selectedLine = selectedImageLine,
+                                        layer = ImageLayer.BEHIND_HIT,
+                                        onSelect = vm::selectImage
+                                    )
+                                    // Pictures in the flow or floating in front are
+                                    // painted over the text.
+                                    InlineImageLayer(
+                                        anchors = imageAnchors,
+                                        layout = layout,
+                                        attachments = attachmentsById,
+                                        selectedLine = selectedImageLine,
+                                        layer = ImageLayer.FRONT_PAINT,
+                                        onSelect = vm::selectImage
+                                    )
                                 }
                             }
                         )
@@ -399,9 +428,11 @@ fun EditorScreen(
             }
             // Attachments strip, then the toolbar riding above the keyboard via
             // IME insets (zero extra space when the keyboard is dismissed).
+            // Pictures that live inline in the text are not listed here.
+            val inlineImageIds = remember(doc) { doc.imageAnchors().map { it.image.attachmentId }.toSet() }
             if (attachments.isNotEmpty()) {
                 AttachmentStrip(
-                    attachments = attachments.filter { it.kind != "file" },
+                    attachments = attachments.filter { it.kind != "file" && it.id !in inlineImageIds },
                     onOpen = { viewer = it },
                     onRemove = { vm.removeImage(it) },
                     onAdd = { picker.launch("image/*") }
@@ -430,6 +461,16 @@ fun EditorScreen(
                         text = { Text("${f.fileName} will be deleted from this device.") }
                     )
                 }
+            }
+            // Placement controls for the picture at the caret.
+            if (selectedImage != null) {
+                ImageActionBar(
+                    placement = selectedImage.placement,
+                    onInline = { vm.setImagePlacement(ImagePlacement.INLINE) },
+                    onBehind = { vm.setImagePlacement(ImagePlacement.BEHIND) },
+                    onFront = { vm.setImagePlacement(ImagePlacement.IN_FRONT) },
+                    onRemove = { vm.removeImageAtCaret() }
+                )
             }
             FormattingToolbar(
                 active = doc.activeKinds(),
@@ -680,6 +721,148 @@ private fun InfoRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
         Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
         Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** Multi-tap bookkeeping for word/paragraph selection (kept out of composition). */
+private class TapTracker {
+    var count = 0
+    var time = 0L
+    /** Screen position of the last tap, in pixels. */
+    var x = 0f
+    var y = 0f
+}
+
+/**
+ * Placement controls for the picture at the caret: in the text flow, behind
+ * the text or in front of it, plus removal.
+ */
+@Composable
+private fun ImageActionBar(
+    placement: ImagePlacement,
+    onInline: () -> Unit,
+    onBehind: () -> Unit,
+    onFront: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        InkoraChip("Inline", selected = placement == ImagePlacement.INLINE, onClick = onInline)
+        InkoraChip("Behind text", selected = placement == ImagePlacement.BEHIND, onClick = onBehind)
+        InkoraChip("In front", selected = placement == ImagePlacement.IN_FRONT, onClick = onFront)
+        InkoraChip("Remove image", selected = false, onClick = onRemove)
+    }
+}
+
+/**
+ * Which pass of the editor an inline image is painted in.
+ *
+ * BEHIND_PAINT draws the picture under the text, FRONT_PAINT draws it over
+ * the text, BEHIND_HIT is an invisible, tappable copy of a floating picture
+ * so it can still be selected although the text sits on top of it.
+ */
+private enum class ImageLayer { BEHIND_PAINT, FRONT_PAINT, BEHIND_HIT }
+
+/**
+ * Paints the document's inline images over the text field. Positions come
+ * from the text layout, so a picture always sits where its placeholder
+ * character sits.
+ */
+@Composable
+private fun InlineImageLayer(
+    anchors: List<ImageAnchor>,
+    layout: TextLayoutResult?,
+    attachments: Map<Long, Attachment>,
+    selectedLine: Int?,
+    layer: ImageLayer,
+    onSelect: (Int) -> Unit
+) {
+    if (layout == null || anchors.isEmpty()) return
+    val density = LocalDensity.current
+    Box(Modifier.fillMaxSize()) {
+        anchors.forEach { anchor ->
+            val behind = anchor.image.placement == ImagePlacement.BEHIND
+            val wanted = when (layer) {
+                ImageLayer.BEHIND_PAINT, ImageLayer.BEHIND_HIT -> behind
+                ImageLayer.FRONT_PAINT -> !behind
+            }
+            if (!wanted) return@forEach
+            val attachment = attachments[anchor.image.attachmentId] ?: return@forEach
+            val rect = imageRect(layout, anchor) ?: return@forEach
+            InlineImageBox(
+                file = attachment.file,
+                width = with(density) { rect.width.toDp() },
+                height = with(density) { rect.height.toDp() },
+                x = with(density) { rect.left.toDp() },
+                y = with(density) { rect.top.toDp() },
+                placement = anchor.image.placement,
+                showImage = layer != ImageLayer.BEHIND_HIT,
+                selected = anchor.line == selectedLine,
+                onSelect = { onSelect(anchor.line) }
+            )
+        }
+    }
+}
+
+/**
+ * Screen box of an inline image, derived from the text layout: a picture in
+ * the flow fills the line its placeholder reserved, a floating one hovers
+ * over the paragraph it is anchored to.
+ */
+private fun imageRect(layout: TextLayoutResult, anchor: ImageAnchor): Rect? {
+    val text = layout.layoutInput.text
+    val offset = anchor.offset.coerceIn(0, text.length)
+    val visualLine = layout.getLineForOffset(offset)
+    if (visualLine < 0 || visualLine >= layout.lineCount) return null
+    val top = layout.getLineTop(visualLine)
+    val bottom = layout.getLineBottom(visualLine)
+    val left = layout.getLineLeft(visualLine)
+    val column = layout.size.width.toFloat()
+    return when (anchor.image.placement) {
+        ImagePlacement.INLINE -> Rect(left, top, column, bottom)
+        else -> {
+            val lineHeight = (bottom - top).coerceAtLeast(1f)
+            Rect(left, top, left + column * 0.62f, bottom + lineHeight * 1.4f)
+        }
+    }
+}
+
+/** One inline picture, placed at the box the text layout reserved for it. */
+@Composable
+private fun InlineImageBox(
+    file: File?,
+    width: Dp,
+    height: Dp,
+    x: Dp,
+    y: Dp,
+    placement: ImagePlacement,
+    showImage: Boolean,
+    selected: Boolean,
+    onSelect: () -> Unit
+) {
+    Box(
+        Modifier
+            .offset(x = x, y = y)
+            .size(width, height)
+            .then(if (showImage && placement == ImagePlacement.BEHIND) Modifier.alpha(0.35f) else Modifier)
+            .clickable { onSelect() }
+    ) {
+        if (showImage) {
+            LocalImageFull(file, Modifier.fillMaxSize())
+        }
+        if (selected) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp))
+            )
+        }
     }
 }
 

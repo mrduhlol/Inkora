@@ -15,10 +15,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
 import com.abhishek.inkora.domain.model.BlockKind
+import com.abhishek.inkora.domain.model.IMAGE_PLACEHOLDER
+import com.abhishek.inkora.domain.model.ImagePlacement
 import com.abhishek.inkora.domain.model.ParaAlign
 import com.abhishek.inkora.domain.model.RichAlign
 import com.abhishek.inkora.domain.model.RichBlock
 import com.abhishek.inkora.domain.model.RichContent
+import com.abhishek.inkora.domain.model.RichImage
 import com.abhishek.inkora.domain.model.RichLink
 import com.abhishek.inkora.domain.model.RichSpan
 import com.abhishek.inkora.domain.model.RichText
@@ -30,8 +33,21 @@ import com.abhishek.inkora.domain.model.SpanKind
  *
  * List prefixes (•, 1., ☐/☑) are generated glyphs managed by code — never
  * user-typed syntax. [pending] holds span kinds to apply to subsequently typed
- * text when the cursor is collapsed (Test 4).
+ * text when the cursor is collapsed (Test 4); pending attributes are sticky —
+ * they survive every keystroke until the user changes them.
  */
+
+/** An inline image anchored in a line: the attachment it points at and how it sits. */
+data class EditImage(
+    val attachmentId: Long,
+    val placement: ImagePlacement = ImagePlacement.INLINE,
+    /** Character offset of the placeholder inside the line text. */
+    val anchor: Int = 0
+)
+
+/** Absolute rendered position of an inline image placeholder. */
+data class ImageAnchor(val line: Int, val offset: Int, val image: EditImage)
+
 data class EditLine(
     val text: String = "",
     val spans: List<RichSpan> = emptyList(), // relative to [text]
@@ -39,7 +55,9 @@ data class EditLine(
     val block: BlockKind = BlockKind.PARAGRAPH,
     val checked: Boolean = false,
     val indent: Int = 0, // 0..4, rendered as em-space prefix
-    val align: ParaAlign = ParaAlign.LEFT
+    val align: ParaAlign = ParaAlign.LEFT,
+    /** Inline image anchored in this line (null for ordinary lines). */
+    val image: EditImage? = null
 )
 
 fun ParaAlign.toTextAlign(): TextAlign = when (this) {
@@ -62,6 +80,7 @@ data class RichDoc(
 
         fun fromRich(c: RichContent, selection: TextRange = TextRange.Zero): RichDoc {
             val raw = RichText.linesOf(c.text)
+            val imagesByLine = c.images.groupBy { it.line }
             return RichDoc(
                 lines = raw.mapIndexed { i, t ->
                     val lineStart = c.text.lineStartOf(i)
@@ -77,9 +96,11 @@ data class RichDoc(
                     }
                     val b = c.blocks.firstOrNull { it.line == i }
                     val a = c.aligns.firstOrNull { it.line == i }
+                    val img = imagesByLine[i]?.firstOrNull()
                     EditLine(
                         t, rel, relLinks, b?.kind ?: BlockKind.PARAGRAPH, b?.checked ?: false,
-                        b?.indent?.coerceIn(0, 4) ?: 0, a?.align ?: ParaAlign.LEFT
+                        b?.indent?.coerceIn(0, 4) ?: 0, a?.align ?: ParaAlign.LEFT,
+                        img?.let { EditImage(it.attachmentId, it.placement, it.anchor.coerceIn(0, t.length)) }
                     )
                 }.ifEmpty { listOf(EditLine()) },
                 selection = selection
@@ -105,6 +126,7 @@ data class RichDoc(
         val links = mutableListOf<RichLink>()
         val blocks = mutableListOf<RichBlock>()
         val aligns = mutableListOf<RichAlign>()
+        val images = mutableListOf<RichImage>()
         lines.forEachIndexed { i, l ->
             if (i > 0) sb.append('\n')
             val base = sb.length
@@ -115,8 +137,9 @@ data class RichDoc(
                 blocks.add(RichBlock(i, l.block, l.checked, l.indent.coerceIn(0, 4)))
             }
             if (l.align != ParaAlign.LEFT) aligns.add(RichAlign(i, l.align))
+            l.image?.let { images.add(RichImage(i, it.attachmentId, it.placement, it.anchor)) }
         }
-        return RichContent(sb.toString(), spans, blocks, aligns, links)
+        return RichContent(sb.toString(), spans, blocks, aligns, links, images)
     }
 
     /** Rendered text (with generated prefixes) — the string BasicTextField edits. */
@@ -195,6 +218,15 @@ data class RichDoc(
                             base + link.end
                         )
                     }
+                    l.image?.let { img ->
+                        // The placeholder is the anchor of the image: INLINE
+                        // reserves a tall line box for the picture, the floating
+                        // placements stay invisible and take no room.
+                        val p = base + img.anchor.coerceIn(0, l.text.length)
+                        if (p < base + l.text.length) {
+                            addStyle(placeholderStyle(img.placement), p, p + 1)
+                        }
+                    }
                 }
                 if (l.align != ParaAlign.LEFT) {
                     addStyle(ParagraphStyle(textAlign = l.align.toTextAlign()), lineStart, length)
@@ -246,23 +278,18 @@ data class RichDoc(
         }
         val rawLines = newRendered.split('\n')
         val parsed = rawLines.mapIndexed { i, raw -> parseLine(raw, lines.getOrNull(i)) }
-        // Apply pending attrs to newly inserted chars.
+        // Apply pending attrs to newly inserted chars. Pending attributes are
+        // sticky: they apply to everything typed next and stay until the user
+        // changes them (a size, a colour or a span kind).
         var doc = copy(lines = parsed.ifEmpty { listOf(EditLine()) }, selection = newSel, pending = pending)
-        if (pending.isNotEmpty()) {
-            val ins = insertedRange(oldRendered, newRendered)
-            if (ins != null && ins.first < ins.second && !newRendered.substring(ins.first, ins.second).contains('\n')) {
-                doc = doc.addSpansAbsolute(ins.first, ins.second, pending)
-            }
-            doc = doc.copy(pending = emptySet())
-        }
-        if (pendingSize != null || pendingColor != null) {
-            val ins = insertedRange(oldRendered, newRendered)
-            if (ins != null && ins.first < ins.second && !newRendered.substring(ins.first, ins.second).contains('\n')) {
+        val ins = insertedRange(oldRendered, newRendered)
+        if (ins != null && ins.first < ins.second &&
+            !newRendered.substring(ins.first, ins.second).contains('\n')
+        ) {
+            if (pending.isNotEmpty()) doc = doc.addSpansAbsolute(ins.first, ins.second, pending)
+            if (pendingSize != null || pendingColor != null) {
                 doc = doc.addValueSpansAbsolute(ins.first, ins.second, pendingSize, pendingColor)
             }
-            // Size and color are typing modes, like the toolbar controls in a
-            // word processor: keep them active for every later insertion until
-            // the user explicitly chooses a different value or clears them.
         }
         return doc
     }
@@ -455,7 +482,7 @@ data class RichDoc(
             else EditLine(raw.trim(), emptyList())
         }
         if (old.block == BlockKind.PARAGRAPH && old.indent == 0) {
-            return EditLine(raw, remapSpans(old, raw), remapLinks(old, raw), align = old.align)
+            return EditLine(raw, remapSpans(old, raw), remapLinks(old, raw), align = old.align, image = imageAfterEdit(old.image, raw))
         }
         var text = raw
         val ind = indentStr(old.indent)
@@ -481,7 +508,19 @@ data class RichDoc(
                 text = text.replaceFirst(it, "")
             }
         }
-        return EditLine(text, remapSpans(old, text), remapLinks(old, text), old.block, old.checked, old.indent, old.align)
+        return EditLine(text, remapSpans(old, text), remapLinks(old, text), old.block, old.checked, old.indent, old.align, imageAfterEdit(old.image, text))
+    }
+
+    /**
+     * Keep the image of a line when its placeholder survived the edit. The
+     * anchor follows the placeholder, so typing before the picture does not
+     * detach it.
+     */
+    private fun imageAfterEdit(old: EditImage?, newText: String): EditImage? {
+        val img = old ?: return null
+        val at = newText.indexOf(IMAGE_PLACEHOLDER)
+        if (at < 0) return null
+        return img.copy(anchor = at)
     }
 
     private fun onInputGeneric(newRendered: String, newSel: TextRange): RichDoc {
@@ -497,7 +536,11 @@ data class RichDoc(
         if (s >= e) {
             return copy(pending = if (pending.contains(kind)) pending - kind else pending + kind)
         }
-        return addOrRemoveAbsolute(s, e, kind).copy(pending = emptySet())
+        val wasCovered = isFullyCovered(s, e, kind)
+        // The selection's new state becomes the pending state, so text typed
+        // right after it keeps the same formatting.
+        val nextPending = if (wasCovered) pending - kind else pending + kind
+        return addOrRemoveAbsolute(s, e, kind).copy(pending = nextPending)
     }
 
     private fun addSpansAbsolute(s: Int, e: Int, kinds: Set<SpanKind>): RichDoc {
@@ -535,12 +578,7 @@ data class RichDoc(
 
     private fun addOrRemoveAbsolute(s: Int, e: Int, kind: SpanKind, addOnly: Boolean = false): RichDoc {
         val r = rendered()
-        val covered = (s until e).all { i ->
-            val li = renderedLineOf(r, i)
-            val line = lines[li]
-            val rel = i - renderedLineStart(r, li) - linePrefixLen(line, li)
-            line.spans.any { it.kind == kind && it.start <= rel && rel < it.end }
-        }
+        val covered = isFullyCovered(s, e, kind)
         val updated = lines.mapIndexed { li, line ->
             val ls = renderedLineStart(r, li)
             val pl = linePrefixLen(line, li)
@@ -550,6 +588,18 @@ data class RichDoc(
             line.copy(spans = toggleRel(line.spans, rs, re, kind, removeOnly = covered && !addOnly))
         }
         return copy(lines = updated)
+    }
+
+    /** True when every character of the rendered range already carries [kind]. */
+    private fun isFullyCovered(s: Int, e: Int, kind: SpanKind): Boolean {
+        if (s >= e) return false
+        val r = rendered()
+        return (s until e).all { i ->
+            val li = renderedLineOf(r, i)
+            val line = lines[li]
+            val rel = i - renderedLineStart(r, li) - linePrefixLen(line, li)
+            line.spans.any { it.kind == kind && it.start <= rel && rel < it.end }
+        }
     }
 
     private fun toggleRel(spans: List<RichSpan>, s: Int, e: Int, kind: SpanKind, removeOnly: Boolean): List<RichSpan> {
@@ -595,7 +645,11 @@ data class RichDoc(
         return starts
     }
 
-    /** Apply [sizeSp] to the selection, or stage it for subsequently typed text. Null clears. */
+    /**
+     * Apply [sizeSp] to the selection, or stage it for subsequently typed
+     * text. Null clears. The size stays in force for everything typed next
+     * until another size is chosen.
+     */
     fun applySize(sizeSp: Int?): RichDoc {
         val (s, e) = selection.min to selection.max
         if (s >= e) return copy(pendingSize = sizeSp)
@@ -611,10 +665,14 @@ data class RichDoc(
             rich = if (sizeSp == null) RichText.clearSize(rich, base + rs, base + re)
             else RichText.setSize(rich, base + rs, base + re, sizeSp)
         }
-        return RichDoc.fromRich(rich, selection).copy(pendingSize = null)
+        return RichDoc.fromRich(rich, selection).copy(pending = pending, pendingSize = sizeSp)
     }
 
-    /** Apply [colorArgb] to the selection, or stage it for subsequently typed text. Null clears. */
+    /**
+     * Apply [colorArgb] to the selection, or stage it for subsequently typed
+     * text. Null clears. The colour stays in force for everything typed next
+     * until another colour is chosen.
+     */
     fun applyColor(colorArgb: Int?): RichDoc {
         val (s, e) = selection.min to selection.max
         if (s >= e) return copy(pendingColor = colorArgb)
@@ -630,7 +688,7 @@ data class RichDoc(
             rich = if (colorArgb == null) RichText.clearColor(rich, base + rs, base + re)
             else RichText.setColor(rich, base + rs, base + re, colorArgb)
         }
-        return RichDoc.fromRich(rich, selection).copy(pendingColor = null)
+        return RichDoc.fromRich(rich, selection).copy(pending = pending, pendingColor = colorArgb)
     }
 
     /** Uniform SIZE value across selection/cursor, else null when mixed or default. */
@@ -652,11 +710,12 @@ data class RichDoc(
             }
             return value
         }
+        // A staged size wins: it is what the next typed characters get.
+        pendingSize?.let { return it }
         val li = renderedLineOf(r, s)
-        val line = lines.getOrNull(li) ?: return pendingSize
+        val line = lines.getOrNull(li) ?: return null
         val rel = s - renderedLineStart(r, li) - linePrefixLen(line, li)
         return line.spans.firstOrNull { it.kind == SpanKind.SIZE && it.start <= rel && rel <= it.end }?.sizeSp
-            ?: pendingSize
     }
 
     /** Uniform COLOR value across selection/cursor, else null when mixed or default. */
@@ -678,11 +737,31 @@ data class RichDoc(
             }
             return value
         }
+        // A staged colour wins: it is what the next typed characters get.
+        pendingColor?.let { return it }
         val li = renderedLineOf(r, s)
-        val line = lines.getOrNull(li) ?: return pendingColor
+        val line = lines.getOrNull(li) ?: return null
         val rel = s - renderedLineStart(r, li) - linePrefixLen(line, li)
         return line.spans.firstOrNull { it.kind == SpanKind.COLOR && it.start <= rel && rel <= it.end }?.colorArgb
-            ?: pendingColor
+    }
+
+    /**
+     * Word range at [offset] in the rendered text, clamped to the line's
+     * content so generated list glyphs are never part of a selection.
+     * [wordStart]/[wordEnd] come from the text layout's word boundary.
+     * Null when there is no word under the offset.
+     */
+    fun wordRangeAt(offset: Int, wordStart: Int, wordEnd: Int): TextRange? {
+        val r = rendered()
+        val li = lineIndexAtRendered(offset)
+        val (contentStart, contentEnd) = contentBounds(li) ?: return null
+        var s = maxOf(wordStart, contentStart)
+        var e = minOf(wordEnd, contentEnd)
+        // Trim padding so the selection covers the word, not its spacing.
+        while (s < e && r[s].isWhitespace()) s++
+        while (e > s && r[e - 1].isWhitespace()) e--
+        if (e <= s) return null
+        return TextRange(s, e)
     }
 
     // ---------- links (rendered selection → line-relative) ----------
@@ -743,6 +822,306 @@ data class RichDoc(
         val rel = (s - ls - linePrefixLen(line, li)).coerceIn(0, line.text.length)
         return line.links.firstOrNull { it.start <= rel && rel < it.end }
     }
+
+    // ---------- inline images ----------
+
+    /**
+     * Insert an inline image at the caret. A caret in the middle of a line
+     * splits that line so the picture lands exactly where the cursor was.
+     * The image is anchored by a placeholder character in the line text.
+     */
+    fun insertImage(attachmentId: Long, placement: ImagePlacement = ImagePlacement.INLINE): RichDoc {
+        val r = rendered()
+        val caret = selection.min.coerceIn(0, r.length)
+        val li = lineIndexAtRendered(caret)
+        val line = lines.getOrNull(li) ?: return this
+        val ls = renderedLineStart(r, li)
+        val pl = linePrefixLen(line, li)
+        val rel = (caret - ls - pl).coerceIn(0, line.text.length)
+        val before = line.text.substring(0, rel)
+        val after = line.text.substring(rel)
+        val imgLine = EditLine(
+            text = IMAGE_PLACEHOLDER,
+            block = BlockKind.PARAGRAPH,
+            indent = line.indent,
+            align = ParaAlign.LEFT,
+            image = EditImage(attachmentId, ImagePlacement.INLINE, 0)
+        )
+        val updated = lines.toMutableList()
+        val imageLine: Int = when {
+            before.isEmpty() && after.isEmpty() -> {
+                updated[li] = imgLine
+                li
+            }
+            before.isEmpty() -> {
+                updated.add(li, imgLine)
+                li
+            }
+            after.isEmpty() -> {
+                updated.add(li + 1, imgLine)
+                li + 1
+            }
+            else -> {
+                updated[li] = line.copy(
+                    text = before,
+                    spans = spansBefore(line.spans, before.length),
+                    links = linksBefore(line.links, before.length)
+                )
+                updated.add(li + 1, imgLine)
+                updated.add(li + 2, line.copy(
+                    text = after,
+                    spans = spansAfter(line.spans, rel, after.length),
+                    links = linksAfter(line.links, rel, after.length)
+                ))
+                li + 1
+            }
+        }
+        val withLines = copy(lines = updated)
+        val placed = if (placement == ImagePlacement.INLINE) withLines else withLines.floatImage(imageLine, placement)
+        val finalLine = placed.lineOfImage(attachmentId) ?: imageLine
+        return placed.copy(selection = placed.caretAfterImage(finalLine))
+    }
+
+    /**
+     * Change how the image on [line] sits relative to the text.
+     *
+     * INLINE gives the picture its own line in the flow. The floating
+     * placements (BEHIND, IN_FRONT) move the anchor onto the neighbouring
+     * paragraph so the picture can float over real text.
+     */
+    fun setImagePlacement(line: Int, placement: ImagePlacement): RichDoc {
+        val l = lines.getOrNull(line) ?: return this
+        val img = l.image ?: return this
+        if (img.placement == placement) return this
+        val placed = when (placement) {
+            ImagePlacement.INLINE -> inlineImage(line)
+            else -> floatImage(line, placement)
+        }
+        val newLine = placed.lineOfImage(img.attachmentId) ?: line
+        return placed.copy(selection = placed.selectImage(newLine).selection)
+    }
+
+    /** Line index of the image that points at [attachmentId]. */
+    private fun lineOfImage(attachmentId: Long): Int? =
+        lines.indexOfFirst { it.image?.attachmentId == attachmentId }.takeIf { it >= 0 }
+
+    /** Caret position right after the picture on [imageLine]. */
+    private fun caretAfterImage(imageLine: Int): TextRange {
+        val r = rendered()
+        val next = (imageLine + 1).coerceAtMost(lines.size - 1)
+        val pos = if (next != imageLine) {
+            renderedLineStart(r, next) + prefixLenAt(next)
+        } else {
+            val start = renderedLineStart(r, imageLine)
+            start + prefixLenAt(imageLine) + lines[imageLine].text.length
+        }
+        return TextRange(pos)
+    }
+
+    /** Move the image of [line] back into the text flow on a line of its own. */
+    private fun inlineImage(line: Int): RichDoc {
+        val l = lines[line]
+        val img = l.image ?: return this
+        val pos = img.anchor.coerceIn(0, l.text.length)
+        val stripped = l.text.removeRange(pos, minOf(pos + 1, l.text.length))
+        val before = stripped.substring(0, pos)
+        val after = stripped.substring(pos)
+        val imgLine = EditLine(
+            text = IMAGE_PLACEHOLDER,
+            block = BlockKind.PARAGRAPH,
+            indent = l.indent,
+            align = ParaAlign.LEFT,
+            image = EditImage(img.attachmentId, ImagePlacement.INLINE, 0)
+        )
+        val updated = lines.toMutableList()
+        updated.removeAt(line)
+        var insertAt = line
+        if (before.isNotEmpty()) {
+            updated.add(insertAt, l.copy(
+                text = before,
+                spans = spansBefore(spansWithoutChar(l.spans, pos), before.length),
+                links = linksBefore(linksWithoutChar(l.links, pos), before.length),
+                image = null
+            ))
+            insertAt++
+        }
+        updated.add(insertAt, imgLine)
+        insertAt++
+        if (after.isNotEmpty()) {
+            updated.add(insertAt, l.copy(
+                text = after,
+                spans = spansAfter(spansWithoutChar(l.spans, pos), pos, after.length),
+                links = linksAfter(linksWithoutChar(l.links, pos), pos, after.length),
+                image = null
+            ))
+        }
+        val withLines = copy(lines = updated)
+        val nr = withLines.rendered()
+        val caret = withLines.renderedLineStart(nr, insertAt - 1)
+        return withLines.copy(selection = TextRange(caret))
+    }
+
+    /**
+     * Float the image of [line] over the text: the anchor moves onto the
+     * nearest paragraph that carries text, so BEHIND / IN_FRONT pictures have
+     * something to float over.
+     */
+    private fun floatImage(line: Int, placement: ImagePlacement): RichDoc {
+        val l = lines[line]
+        val img = l.image ?: return this
+        // Already floating on a text line: only the placement changes.
+        if (l.text.replace(IMAGE_PLACEHOLDER, "").isNotBlank()) {
+            return copy(lines = lines.mapIndexed { i, ln ->
+                if (i == line) ln.copy(image = img.copy(placement = placement)) else ln
+            })
+        }
+        val target = floatTarget(line)
+        if (target == null) {
+            // Nothing to float over: the picture keeps its own (empty) line.
+            return copy(lines = lines.mapIndexed { i, ln ->
+                if (i == line) ln.copy(image = img.copy(placement = placement)) else ln
+            })
+        }
+        val updated = lines.toMutableList()
+        updated.removeAt(line)
+        // The picture's own line is gone: the target moves up when it sat
+        // below the removed line.
+        val at = if (target > line) target - 1 else target
+        val t = updated[at]
+        updated[at] = t.copy(
+            text = IMAGE_PLACEHOLDER + t.text,
+            spans = spansShifted(t.spans, 1),
+            links = linksShifted(t.links, 1),
+            image = EditImage(img.attachmentId, placement, 0)
+        )
+        return copy(lines = updated)
+    }
+
+    /** Index of the line a floating image should sit over (null when there is none). */
+    private fun floatTarget(line: Int): Int? {
+        var i = line
+        while (i < lines.size) {
+            val text = lines[i].text.replace(IMAGE_PLACEHOLDER, "")
+            // A line that already carries a picture is not a host.
+            if (i != line && text.isNotBlank() && lines[i].image == null) return i
+            i++
+        }
+        i = line - 1
+        while (i >= 0) {
+            val text = lines[i].text.replace(IMAGE_PLACEHOLDER, "")
+            if (text.isNotBlank() && lines[i].image == null) return i
+            i--
+        }
+        return null
+    }
+
+    /** Drop the image on [line] (placeholder included) from the document. */
+    fun removeImage(line: Int): RichDoc {
+        val l = lines.getOrNull(line) ?: return this
+        val img = l.image ?: return this
+        val pos = img.anchor.coerceIn(0, l.text.length)
+        val text = if (pos < l.text.length) l.text.removeRange(pos, pos + 1) else l.text
+        val spans = spansWithoutChar(l.spans, pos)
+        val links = linksWithoutChar(l.links, pos)
+        val updated = lines.toMutableList()
+        if (text.isEmpty() && spans.isEmpty() && links.isEmpty()) {
+            updated.removeAt(line)
+            if (updated.isEmpty()) updated.add(EditLine())
+        } else {
+            updated[line] = l.copy(text = text, spans = spans, links = links, image = null)
+        }
+        val withLines = copy(lines = updated)
+        val nr = withLines.rendered()
+        val caret = withLines.renderedLineStart(nr, line.coerceAtMost(withLines.lines.size - 1))
+        return withLines.copy(selection = TextRange(caret))
+    }
+
+    /** Absolute rendered offsets of every inline image placeholder. */
+    fun imageAnchors(): List<ImageAnchor> {
+        val r = rendered()
+        val out = mutableListOf<ImageAnchor>()
+        lines.forEachIndexed { li, l ->
+            val img = l.image ?: return@forEachIndexed
+            val ls = renderedLineStart(r, li)
+            val pl = linePrefixLen(l, li)
+            out.add(ImageAnchor(li, ls + pl + img.anchor.coerceIn(0, l.text.length), img))
+        }
+        return out
+    }
+
+    /** Line index of the image at the caret, or null when the caret is elsewhere. */
+    fun imageLineAtCaret(): Int? {
+        val li = lineIndexAtRendered(selection.min)
+        return if (lines.getOrNull(li)?.image != null) li else null
+    }
+
+    /** The image at the caret (null when the caret is not on an image). */
+    fun imageAtCaret(): EditImage? =
+        imageLineAtCaret()?.let { lines.getOrNull(it)?.image }
+
+    /** Put the caret on the image of [line] (used when the picture is tapped). */
+    fun selectImage(line: Int): RichDoc {
+        val l = lines.getOrNull(line) ?: return this
+        val img = l.image ?: return this
+        val r = rendered()
+        val off = renderedLineStart(r, line) + linePrefixLen(l, line) +
+            img.anchor.coerceIn(0, l.text.length)
+        return copy(selection = TextRange(off))
+    }
+
+    private fun spansBefore(spans: List<RichSpan>, len: Int): List<RichSpan> =
+        spans.mapNotNull {
+            val e = minOf(it.end, len)
+            if (it.start < e) RichSpan(it.start, e, it.kind, it.sizeSp, it.colorArgb) else null
+        }
+
+    private fun spansAfter(spans: List<RichSpan>, offset: Int, len: Int): List<RichSpan> =
+        spans.mapNotNull {
+            val s = maxOf(it.start, offset)
+            val e = minOf(it.end, offset + len)
+            if (s < e) RichSpan(s - offset, e - offset, it.kind, it.sizeSp, it.colorArgb) else null
+        }
+
+    private fun linksBefore(links: List<RichLink>, len: Int): List<RichLink> =
+        links.mapNotNull {
+            val e = minOf(it.end, len)
+            if (it.start < e) RichLink(it.start, e, it.url) else null
+        }
+
+    private fun linksAfter(links: List<RichLink>, offset: Int, len: Int): List<RichLink> =
+        links.mapNotNull {
+            val s = maxOf(it.start, offset)
+            val e = minOf(it.end, offset + len)
+            if (s < e) RichLink(s - offset, e - offset, it.url) else null
+        }
+
+    private fun spansWithoutChar(spans: List<RichSpan>, pos: Int): List<RichSpan> =
+        spans.mapNotNull {
+            val s = if (it.start > pos) it.start - 1 else it.start
+            val e = if (it.end > pos) it.end - 1 else it.end
+            if (s < e) RichSpan(s, e, it.kind, it.sizeSp, it.colorArgb) else null
+        }
+
+    private fun linksWithoutChar(links: List<RichLink>, pos: Int): List<RichLink> =
+        links.mapNotNull {
+            val s = if (it.start > pos) it.start - 1 else it.start
+            val e = if (it.end > pos) it.end - 1 else it.end
+            if (s < e) RichLink(s, e, it.url) else null
+        }
+
+    private fun spansShifted(spans: List<RichSpan>, delta: Int): List<RichSpan> =
+        spans.mapNotNull {
+            val s = (it.start + delta).coerceAtLeast(0)
+            val e = (it.end + delta).coerceAtLeast(s)
+            if (s < e) RichSpan(s, e, it.kind, it.sizeSp, it.colorArgb) else null
+        }
+
+    private fun linksShifted(links: List<RichLink>, delta: Int): List<RichLink> =
+        links.mapNotNull {
+            val s = (it.start + delta).coerceAtLeast(0)
+            val e = (it.end + delta).coerceAtLeast(s)
+            if (s < e) RichLink(s, e, it.url) else null
+        }
 
     // ---------- tables ----------
 
@@ -945,4 +1324,16 @@ fun styleForSpan(span: RichSpan): SpanStyle = when (span.kind) {
     SpanKind.SIZE -> SpanStyle(fontSize = (span.sizeSp ?: 16).coerceIn(10, 32).sp)
     SpanKind.COLOR -> span.colorArgb?.let { SpanStyle(color = Color(it)) } ?: SpanStyle()
     else -> styleFor(span.kind)
+}
+
+/**
+ * Style of the invisible character that anchors an inline image.
+ *
+ * INLINE reserves a tall line box — the picture is painted into it, so the
+ * text flow keeps a hole for it. The floating placements share the
+ * paragraph's line, so their anchor stays as small as possible.
+ */
+fun placeholderStyle(placement: ImagePlacement): SpanStyle = when (placement) {
+    ImagePlacement.INLINE -> SpanStyle(fontSize = 96.sp, color = Color.Transparent)
+    else -> SpanStyle(fontSize = 1.sp, color = Color.Transparent)
 }

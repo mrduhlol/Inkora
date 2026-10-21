@@ -45,6 +45,7 @@ import com.abhishek.inkora.data.repository.DataRepository
 import com.abhishek.inkora.data.repository.HandwritingRepository
 import com.abhishek.inkora.domain.model.HwStroke
 import com.abhishek.inkora.domain.model.Note
+import com.abhishek.inkora.domain.model.RichText
 import com.abhishek.inkora.domain.repository.NoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -107,7 +108,23 @@ class TrashViewModel @Inject constructor(
         lastDeleted = null
         viewModelScope.launch {
             val id = notes.upsert(deleted.note.copy(isDeleted = false))
-            deleted.files.forEach { attachments.restoreSnapshot(id, it) }
+            // Restored attachments get fresh ids: rewrite the inline image
+            // references so the pictures stay where they were.
+            val remap = mutableMapOf<Long, Long>()
+            deleted.files.forEach { backup ->
+                val newId = attachments.restoreSnapshot(id, backup)
+                if (newId != backup.id) remap[backup.id] = newId
+            }
+            if (remap.isNotEmpty()) {
+                val note = notes.getById(id)
+                val rich = note?.let { RichText.decodeOrNull(it.content) }
+                if (note != null && rich != null && rich.images.isNotEmpty()) {
+                    val remapped = RichText.remapImageIds(rich, remap)
+                    if (remapped != rich) {
+                        notes.upsert(note.copy(content = RichText.encode(remapped)))
+                    }
+                }
+            }
             deleted.tagIds.forEach { runCatching { tags.link(NoteTagCrossRef(id, it)) } }
             if (deleted.ink.isNotEmpty()) {
                 runCatching { handwriting.save(id, deleted.ink) }
