@@ -70,6 +70,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -187,7 +188,7 @@ fun EditorScreen(
     val viewConfig = LocalViewConfiguration.current
     var tapCount by remember { mutableStateOf(0) }
     var lastTapTime by remember { mutableStateOf(0L) }
-    var lastTapOffset by remember { mutableStateOf(-1) }
+    var lastTapPosition by remember { mutableStateOf<Offset?>(null) }
 
     /**
      * Owns multi-tap text selection explicitly: double-tap selects the word,
@@ -198,16 +199,17 @@ fun EditorScreen(
      */
     fun handleTextTap(
         offset: Int,
+        position: Offset,
         onWord: (androidx.compose.ui.text.TextRange) -> Unit,
         onParagraph: (androidx.compose.ui.text.TextRange) -> Unit
     ) {
         val now = System.currentTimeMillis()
         tapCount =
             if (now - lastTapTime < viewConfig.doubleTapTimeoutMillis &&
-                kotlin.math.abs(offset - lastTapOffset) <= viewConfig.touchSlop
+                lastTapPosition?.let { (position - it).getDistance() <= viewConfig.touchSlop } == true
             ) tapCount + 1 else 1
         lastTapTime = now
-        lastTapOffset = offset
+        lastTapPosition = position
         val lr = layout ?: return
         val rendered = doc.rendered()
         val li = doc.lineIndexAtRendered(offset)
@@ -360,6 +362,7 @@ fun EditorScreen(
                                             if (up != null) {
                                                 handleTextTap(
                                                     offset = offset,
+                                                    position = down.position,
                                                     onWord = { word ->
                                                         up.consume()
                                                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
