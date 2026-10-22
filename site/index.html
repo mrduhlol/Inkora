@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Inkora — a quiet notebook for Android</title>
+<meta name="description" content="Inkora is a private, offline-first notebook for Android. Handwriting, rich text, to-do notes, attachments and backups — all on your device. No account, no cloud, no tracking." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --canvas: #F2E8CF;
+    --canvas-deep: #EAE0C7;
+    --ink: #17130E;
+    --ink-soft: #5C5443;
+    --paper: #FBF4E4;
+    --dark: #0C0B0B;
+    --dark-paper: #1E1D1B;
+    --orange: #F26B3A;
+    --yellow: #F7C948;
+    --green: #84B25E;
+    --blue: #A9C3EC;
+    --radius: 22px;
+    --shadow: 0 24px 60px -24px rgba(23,19,14,.25), 0 8px 20px -12px rgba(23,19,14,.18);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--canvas);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  /* ---- nav ---- */
+  nav {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    background: color-mix(in srgb, var(--canvas) 78%, transparent);
+    border-bottom: 1px solid rgba(23,19,14,.08);
+  }
+  nav .row { display: flex; align-items: center; justify-content: space-between; height: 68px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 22px; letter-spacing: -0.6px; }
+  .logo-mark { width: 34px; height: 34px; border-radius: 11px; background: var(--dark); display: grid; place-items: center; }
+  .logo-mark svg { width: 20px; height: 20px; }
+  .nav-links { display: flex; align-items: center; gap: 22px; font-weight: 500; font-size: 15px; color: var(--ink-soft); }
+  .nav-links a:hover { color: var(--ink); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 22px; border-radius: 999px; font-weight: 600; font-size: 15px;
+    border: 1px solid transparent; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--dark); color: var(--paper); box-shadow: 0 10px 24px -12px rgba(12,11,11,.5); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 14px 28px -12px rgba(12,11,11,.55); }
+  .btn-ghost { background: transparent; color: var(--ink); border-color: rgba(23,19,14,.18); }
+  .btn-ghost:hover { background: rgba(23,19,14,.06); }
+  .btn-sm { padding: 9px 16px; font-size: 14px; }
+  /* ---- hero ---- */
+  .hero { padding: 88px 0 64px; position: relative; }
+  .hero-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 56px; align-items: center; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border-radius: 999px; background: rgba(23,19,14,.06); font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+  .eyebrow .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); }
+  h1 { font-size: clamp(44px, 6vw, 76px); line-height: 1.02; letter-spacing: -2px; font-weight: 800; margin: 20px 0 18px; }
+  h1 .accent { color: var(--orange); }
+  .lede { font-size: 19px; color: var(--ink-soft); max-width: 520px; margin: 0 0 30px; }
+  .cta-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .meta { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 18px; font-size: 13px; color: var(--ink-soft); font-weight: 500; }
+  .meta span { display: inline-flex; align-items: center; gap: 6px; }
+  .meta .check { width: 16px; height: 16px; border-radius: 50%; background: var(--green); color: #fff; display: grid; place-items: center; font-size: 10px; font-weight: 800; }
+  /* ---- phone mockup ---- */
+  .phone {
+    position: relative; width: 300px; height: 620px; margin: 0 auto;
+    border-radius: 46px; background: var(--dark); padding: 12px;
+    box-shadow: 0 40px 80px -30px rgba(12,11,11,.55), 0 0 0 1px rgba(255,255,255,.06) inset;
+  }
+  .phone-screen { width: 100%; height: 100%; border-radius: 34px; background: var(--dark); overflow: hidden; position: relative; }
+  .phone-notch { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 96px; height: 26px; border-radius: 0 0 16px 16px; background: #000; z-index: 2; }
+  .phone-ui { padding: 52px 18px 18px; height: 100%; display: flex; flex-direction: column; gap: 12px; }
+  .phone-title { font-size: 26px; font-weight: 800; letter-spacing: -0.8px; color: #F2EDE1; margin: 0 0 6px; }
+  .phone-chips { display: flex; gap: 6px; margin-bottom: 4px; }
+  .chip { padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 600; border: 1px solid rgba(242,237,225,.25); color: #F2EDE1; }
+  .chip.on { background: #F2EDE1; color: #17130E; border-color: transparent; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { border-radius: 16px; padding: 12px; min-height: 118px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 6px 14px -8px rgba(0,0,0,.35); }
+  .card h4 { margin: 0; font-size: 13px; font-weight: 700; color: #17130E; }
+  .card p { margin: 0; font-size: 11px; color: #17130E; opacity: .7; line-height: 1.4; }
+  .card .heart { align-self: flex-end; margin-top: auto; font-size: 12px; }
+  .c-orange { background: var(--orange); }
+  .c-yellow { background: var(--yellow); }
+  .c-green { background: var(--green); }
+  .c-cream { background: #FBF4E4; }
+  .phone-fab { position: absolute; bottom: 22px; left: 28px; width: 52px; height: 52px; border-radius: 50%; background: #14110E; color: #F7F3EA; display: grid; place-items: center; font-size: 26px; font-weight: 300; box-shadow: 0 10px 20px -8px rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.18); }
+  .phone-fab::after { content: "+"; }
+  .phone-mic { position: absolute; bottom: 30px; left: 92px; width: 74px; height: 36px; border-radius: 999px; background: #F2EDE1; display: grid; place-items: center; font-size: 12px; color: #17130E; font-weight: 600; }
+  .phone-mic::before { content: "🎤"; margin-right: 4px; }
+  .glow { position: absolute; inset: -40px; background: radial-gradient(circle at 70% 40%, rgba(242,107,58,.35), transparent 60%); filter: blur(20px); z-index: -1; }
+  /* ---- sections ---- */
+  section { padding: 88px 0; }
+  .section-head { max-width: 640px; margin: 0 auto 56px; text-align: center; }
+  .section-head h2 { font-size: clamp(30px, 4vw, 46px); letter-spacing: -1.2px; font-weight: 800; margin: 0 0 14px; }
+  .section-head p { color: var(--ink-soft); font-size: 17px; margin: 0; }
+  .eyebrow-center { justify-content: center; margin: 0 auto; }
+  /* ---- features ---- */
+  .features { background: var(--paper); border-top: 1px solid rgba(23,19,14,.06); border-bottom: 1px solid rgba(23,19,14,.06); }
+  .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .feat { background: var(--canvas); border-radius: var(--radius); padding: 26px; border: 1px solid rgba(23,19,14,.06); transition: transform .2s ease, box-shadow .2s ease; }
+  .feat:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .feat .ico { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 22px; margin-bottom: 14px; background: var(--dark); color: var(--paper); }
+  .feat h3 { margin: 0 0 6px; font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+  .feat p { margin: 0; color: var(--ink-soft); font-size: 14.5px; }
+  /* ---- papers showcase ---- */
+  .papers { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-top: 36px; }
+  .paper-swatch { width: 74px; height: 74px; border-radius: 18px; box-shadow: 0 8px 18px -10px rgba(23,19,14,.3); border: 1px solid rgba(23,19,14,.08); position: relative; }
+  .paper-swatch span { position: absolute; bottom: 8px; left: 10px; font-size: 10px; font-weight: 700; color: #17130E; opacity: .7; text-transform: uppercase; letter-spacing: .6px; }
+  .paper-swatch.dark span { color: #F2EDE1; opacity: .8; }
+  /* ---- install ---- */
+  .install { background: var(--dark); color: var(--paper); }
+  .install .section-head h2 { color: var(--paper); }
+  .install .section-head p { color: rgba(247,235,221,.7); }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; counter-reset: step; }
+  .step { padding: 26px; border-radius: var(--radius); background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
+  .step .num { font-size: 40px; font-weight: 800; letter-spacing: -1.5px; color: var(--orange); line-height: 1; margin-bottom: 12px; }
+  .step h3 { margin: 0 0 6px; font-size: 17px; font-weight: 700; color: var(--paper); }
+  .step p { margin: 0; color: rgba(247,235,221,.7); font-size: 14.5px; }
+  .install-cta { text-align: center; margin-top: 40px; }
+  .install-cta .btn-primary { background: var(--orange); color: #17130E; box-shadow: 0 14px 30px -12px rgba(242,107,58,.6); }
+  .install-cta .btn-primary:hover { background: #ff7a4a; }
+  /* ---- footer ---- */
+  footer { padding: 40px 0 56px; border-top: 1px solid rgba(23,19,14,.08); }
+  footer .row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  footer .links { display: flex; gap: 20px; color: var(--ink-soft); font-size: 14px; font-weight: 500; }
+  footer .links a:hover { color: var(--ink); }
+  footer .copy { color: var(--ink-soft); font-size: 13px; }
+  /* ---- responsive ---- */
+  @media (max-width: 900px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 48px; }
+    .phone { width: 260px; height: 540px; }
+    .feat-grid, .steps { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+  }
+  @media (max-width: 520px) {
+    .wrap { padding: 0 18px; }
+    .hero { padding: 64px 0 40px; }
+    h1 { letter-spacing: -1.4px; }
+  }
+</style>
+</head>
+<body>
+  <nav>
+    <div class="wrap row">
+      <a class="logo" href="#top">
+        <span class="logo-mark">
+          <svg viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="33" y="27" width="42" height="54" rx="9" fill="#D56A57"/>
+            <rect x="40" y="35" width="2" height="38" rx="1" fill="#F7EBDD" opacity=".9"/>
+            <path d="M57 61 C54 58 47 53 47 48 C47 42 54 40 57 45 C60 40 67 42 67 48 C67 53 60 58 57 61 Z" fill="#F7EBDD"/>
+          </svg>
+        </span>
+        Inkora
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#papers">Papers</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/mrduhlol/Inkora" target="_blank" rel="noopener">GitHub</a>
+      </div>
+      <a class="btn btn-primary btn-sm" href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.7.apk">Download APK</a>
+    </div>
+  </nav>
+
+  <main id="top">
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <span class="eyebrow"><span class="dot"></span> Android · offline-first · no account</span>
+          <h1>A quiet notebook,<br/><span class="accent">in your pocket.</span></h1>
+          <p class="lede">Notes are sheets of paper with a folded corner — orange, yellow, green, blue or plain. Tap one and it opens like a real page: formatted, autosaved, yours. Everything stays on your device.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.7.apk">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download Inkora v1.7
+            </a>
+            <a class="btn btn-ghost" href="https://github.com/mrduhlol/Inkora" target="_blank" rel="noopener">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2.1c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.9 18 5.2 18 5.2c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+              View source
+            </a>
+          </div>
+          <div class="meta">
+            <span><span class="check">✓</span> Android 8.0 and up</span>
+            <span><span class="check">✓</span> 100% offline</span>
+            <span><span class="check">✓</span> No account, no cloud</span>
+            <span><span class="check">✓</span> Open source</span>
+          </div>
+        </div>
+        <div style="position:relative">
+          <div class="glow"></div>
+          <div class="phone">
+            <div class="phone-screen">
+              <div class="phone-notch"></div>
+              <div class="phone-ui">
+                <h2 class="phone-title">Inkora</h2>
+                <div class="phone-chips">
+                  <span class="chip on">All 23</span>
+                  <span class="chip">Important</span>
+                  <span class="chip">To-do</span>
+                </div>
+                <div class="cards">
+                  <div class="card c-orange"><h4>Plan for the Day</h4><p>Buy bread ✓<br/>Pilates<br/>Invest</p><span class="heart">♥</span></div>
+                  <div class="card c-yellow"><h4>Image Notes</h4><p>Updated 2h ago</p><span class="heart">♥</span></div>
+                  <div class="card c-cream"><h4>My Lectures</h4><p>5 notes</p><span class="heart">♥</span></div>
+                  <div class="card c-green"><h4>List of ideas</h4><p>Brainstorm, draft…</p><span class="heart">♥</span></div>
+                </div>
+              </div>
+              <div class="phone-fab"></div>
+              <div class="phone-mic">mic</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="features">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow eyebrow-center"><span class="dot"></span> What's inside</span>
+          <h2>A serious everyday notebook.</h2>
+          <p>Structured documents, organization, attachments and privacy — still offline and lightweight.</p>
+        </div>
+        <div class="feat-grid">
+          <div class="feat"><div class="ico">✍️</div><h3>Handwriting</h3><p>A huge zoomable canvas (0.1×–8×) with pen, eraser, pan, ink palette and stroke undo/redo. Ink saves as vectors, never bitmaps.</p></div>
+          <div class="feat"><div class="ico">📝</div><h3>Rich text</h3><p>Links, tables, code blocks, headings, quotes, images and drawings. Two-tier toolbar keeps everyday tools up front.</p></div>
+          <div class="feat"><div class="ico">✅</div><h3>To-do notes</h3><p>Typed task lists with prefilled tasks, first-task autofocus, interactive checkboxes and full autosave.</p></div>
+          <div class="feat"><div class="ico">🎨</div><h3>Paper colors</h3><p>Orange, yellow, green, blue, white, cream, gray or black — per note, with honest contrast guarding.</p></div>
+          <div class="feat"><div class="ico">🔍</div><h3>Search that helps</h3><p>One-tap clear and subtle match highlighting in both grid and list results.</p></div>
+          <div class="feat"><div class="ico">↩️</div><h3>Undo that means it</h3><p>Trashing or archiving offers UNDO that actually restores — even permanent delete in Trash brings back note, tags and attachments.</p></div>
+          <div class="feat"><div class="ico">🔒</div><h3>App lock</h3><p>Biometric lock with immediate authentication prompt. Nothing leaves the device.</p></div>
+          <div class="feat"><div class="ico">💾</div><h3>Backup &amp; restore</h3><p>Full backup format with note types and ink strokes. v1 and v2 backups still import.</p></div>
+          <div class="feat"><div class="ico">⚡</div><h3>Display size</h3><p>Small / Default / Large chrome scaling from Settings, persisted and independent of note content.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="papers">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow eyebrow-center"><span class="dot"></span> Paper colors</span>
+          <h2>Notes are the color. The desk stays quiet.</h2>
+          <p>Eight papers to choose from, each with a folded corner and a readable ink color chosen for contrast.</p>
+        </div>
+        <div class="papers">
+          <div class="paper-swatch" style="background:#F26B3A"><span>orange</span></div>
+          <div class="paper-swatch" style="background:#F7C948"><span>yellow</span></div>
+          <div class="paper-swatch" style="background:#84B25E"><span>green</span></div>
+          <div class="paper-swatch" style="background:#A9C3EC"><span>blue</span></div>
+          <div class="paper-swatch" style="background:#FFFFFF"><span>white</span></div>
+          <div class="paper-swatch" style="background:#FBF4E4"><span>cream</span></div>
+          <div class="paper-swatch" style="background:#F1F0EC"><span>gray</span></div>
+          <div class="paper-swatch dark" style="background:#1E1D1B"><span>dark</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="install" class="install">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow eyebrow-center" style="background:rgba(255,255,255,.08);color:#F7EBDD"><span class="dot" style="background:var(--orange)"></span> Install</span>
+          <h2>Three steps, no store.</h2>
+          <p>Android 8.0 and up. Install via "Allow unknown apps", then open the APK. Updates arrive through future releases.</p>
+        </div>
+        <div class="steps">
+          <div class="step"><div class="num">01</div><h3>Download the APK</h3><p>Grab the latest Inkora-v1.7.apk from the release page. It's a debug build signed for sideloading.</p></div>
+          <div class="step"><div class="num">02</div><h3>Allow unknown apps</h3><p>In Settings, allow your browser or file manager to install unknown apps. One-time step.</p></div>
+          <div class="step"><div class="num">03</div><h3>Open &amp; write</h3><p>Tap the APK, install, and open Inkora. Your first note is one tap away.</p></div>
+        </div>
+        <div class="install-cta">
+          <a class="btn btn-primary" href="https://github.com/mrduhlol/Inkora/releases/latest/download/Inkora-v1.7.apk">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download Inkora v1.7 (APK)
+          </a>
+          <p style="margin-top:14px;color:rgba(247,235,221,.55);font-size:13px">~21 MB · Android 8.0+ · <a href="https://github.com/mrduhlol/Inkora/releases" style="color:var(--orange)">all releases</a></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap row">
+      <a class="logo" href="#top">
+        <span class="logo-mark">
+          <svg viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="33" y="27" width="42" height="54" rx="9" fill="#D56A57"/>
+            <rect x="40" y="35" width="2" height="38" rx="1" fill="#F7EBDD" opacity=".9"/>
+            <path d="M57 61 C54 58 47 53 47 48 C47 42 54 40 57 45 C60 40 67 42 67 48 C67 53 60 58 57 61 Z" fill="#F7EBDD"/>
+          </svg>
+        </span>
+        Inkora
+      </a>
+      <div class="links">
+        <a href="https://github.com/mrduhlol/Inkora">Source</a>
+        <a href="https://github.com/mrduhlol/Inkora/releases">Releases</a>
+        <a href="https://github.com/mrduhlol/Inkora/issues">Issues</a>
+      </div>
+      <div class="copy">© Inkora · No account. No cloud. No tracking.</div>
+    </div>
+  </footer>
+</body>
+</html>
